@@ -68,6 +68,8 @@ curl -X POST http://localhost:3000/api/check-risk \
 2. `GET`, `POST` 등 HTTP 메서드 이름으로 함수 export
 3. DB에 읽고 쓸 게 있으면 `lib/db.ts`의 `readJSON` / `writeJSON` 사용 (사용 전 `data/`에 빈 배열 `[]`을 담은 json 파일 하나 만들어두기)
 
+> `data/*.json`은 로컬 실행 중 계속 바뀌는 런타임 데이터라 `.gitignore`에서 제외됩니다. 새 리소스를 추가할 땐 `data/<이름>.example.json`(빈 배열 `[]`)을 템플릿으로 커밋해두면, 다른 팀원이 clone 후 `<이름>.example.json`을 복사해서 `<이름>.json`으로 로컬에 만들어 쓸 수 있습니다.
+
 ```ts
 import { NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
