@@ -43,3 +43,6 @@ next-env.d.ts
 # runtime JSON DB (local test data, not source) - keep templates via *.example.json
 /data/*.json
 !/data/*.example.json
+
+.vercel
+.env*

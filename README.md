@@ -93,7 +93,9 @@ export async function GET() {
 
 ## 배포
 
-Vercel 배포는 아직 연결 전. GitHub 레포 생성 후 진행 예정.
+Vercel 배포 연결 완료 (https://safemoney-gamma.vercel.app, 프로젝트 `wo0oos-projects/safemoney`). GitHub 레포에 push하면 자동 배포됩니다.
+
+> 참고: `data/*.json` 기반 JSON DB는 Vercel 배포 환경에서 쓰기가 안 됩니다 (`data/risk-history.json`이 `.gitignore` 대상이라 배포 번들에 없고, 서버리스 함수는 파일시스템이 읽기 전용이라 `writeJSON`이 동작 안 함). 그 결과 배포 환경에서 `POST /api/check-risk`는 500 에러를 냅니다. `GET /api/ping`처럼 파일 I/O 없는 라우트는 정상 동작하며, 로컬 개발(`npm run dev`)은 영향 없습니다. 실제 저장이 필요해지는 4주차(이메일 발송 연동, 보호자 대시보드)에 실 DB(Vercel Blob/KV/Postgres 등)로 교체할지 결정 예정.
 
 ## 참고
 

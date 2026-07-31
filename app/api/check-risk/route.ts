@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
 
 type RiskRecord = {
-  id: string;
-  amount: number;
+  id: string; // 레코드 고유 ID
+  amount: number; // 거래 금액
   riskLevel: "Low" | "Medium" | "High";
-  reason: string;
+  reason: string; // 위험 판정 사유 (지금은 더미 문자열 하나)
   timestamp: string;
 };
 
