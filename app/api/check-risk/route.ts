@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
 
+// type/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
+// 필요로 하는 거래 필드. judgeRisk()가 실제 로직으로 바뀌기 전까지는 값만 받아서
+// 기록에 같이 저장해두고, 판정 자체는 아직 amount 더미 규칙만 사용합니다.
+type TransactionType = "transfer" | "withdrawal" | "payment" | "product";
+type ProductRiskGrade = "low" | "mid" | "high" | "very_high" | "none";
+
 type RiskRecord = {
   id: string; // 레코드 고유 ID
   amount: number; // 거래 금액
+  type?: TransactionType;
+  payeeAccount?: string;
+  region?: string;
+  productRiskGrade?: ProductRiskGrade;
   riskLevel: "Low" | "Medium" | "High";
   reason: string; // 위험 판정 사유 (지금은 더미 문자열 하나)
   timestamp: string;
@@ -34,6 +44,10 @@ export async function POST(request: NextRequest) {
   const record: RiskRecord = {
     id: crypto.randomUUID(),
     amount,
+    type: body.type,
+    payeeAccount: body.payeeAccount,
+    region: body.region,
+    productRiskGrade: body.productRiskGrade,
     riskLevel,
     reason,
     timestamp: new Date().toISOString(),
