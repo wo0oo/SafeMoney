@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   // userId가 없으면(콜드스타트 처리 대상과 별개로, 아예 안 보낸 경우) 베이스라인/이력 조회를 건너뜁니다.
   const baseline = body.userId ? await getUserBaseline(body.userId) : null;
   const recentTransactions = body.userId ? await getTodayTransactions(body.userId, timestamp) : [];
-  const { riskLevel, reason } = judgeRisk(transaction, baseline, recentTransactions);
+  const { riskLevel, reason, triggeredRules } = judgeRisk(transaction, baseline, recentTransactions);
 
   const record: RiskRecord = {
     id: crypto.randomUUID(),
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     productRiskGrade: body.productRiskGrade,
     riskLevel,
     reason,
+    triggeredRules,
     timestamp,
   };
 
