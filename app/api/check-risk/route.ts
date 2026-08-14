@@ -1,36 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
+import { getUserBaseline } from "@/lib/userBaseline";
+import { getTodayTransactions } from "@/lib/riskHistory";
+import { judgeRisk, TransactionInput, RiskRecord } from "@/lib/riskEngine";
 
-// type/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
+// userId/type/category/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
 // 필요로 하는 거래 필드. judgeRisk()가 실제 로직으로 바뀌기 전까지는 값만 받아서
 // 기록에 같이 저장해두고, 판정 자체는 아직 amount 더미 규칙만 사용합니다.
-type TransactionType = "transfer" | "withdrawal" | "payment" | "product";
-type ProductRiskGrade = "low" | "mid" | "high" | "very_high" | "none";
-
-type RiskRecord = {
-  id: string; // 레코드 고유 ID
-  amount: number; // 거래 금액
-  type?: TransactionType;
-  payeeAccount?: string;
-  region?: string;
-  productRiskGrade?: ProductRiskGrade;
-  riskLevel: "Low" | "Medium" | "High";
-  reason: string; // 위험 판정 사유 (지금은 더미 문자열 하나)
-  timestamp: string;
-};
-
-// 실제로는 4번(데이터/AI)이 만드는 탐지 로직을 이 자리에서 호출하게 됩니다.
-// 지금은 금액 기준으로만 판정하는 더미 규칙입니다.
-function judgeRisk(amount: number): { riskLevel: RiskRecord["riskLevel"]; reason: string } {
-  if (amount >= 3000000) {
-    return { riskLevel: "High", reason: "평소보다 지나치게 큰 금액의 거래입니다." };
-  }
-  if (amount >= 500000) {
-    return { riskLevel: "Medium", reason: "평소보다 다소 큰 금액의 거래입니다." };
-  }
-  return { riskLevel: "Low", reason: "평소 소비 패턴과 유사합니다." };
-}
-
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const amount = Number(body.amount);
@@ -39,18 +15,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "amount는 숫자여야 합니다." }, { status: 400 });
   }
 
-  const { riskLevel, reason } = judgeRisk(amount);
+  const timestamp = new Date().toISOString();
+  const transaction: TransactionInput = {
+    amount,
+    userId: body.userId,
+    type: body.type,
+    category: body.category,
+    payeeAccount: body.payeeAccount,
+    region: body.region,
+    productRiskGrade: body.productRiskGrade,
+    timestamp,
+  };
+
+  // userId가 없으면(콜드스타트 처리 대상과 별개로, 아예 안 보낸 경우) 베이스라인/이력 조회를 건너뜁니다.
+  const baseline = body.userId ? await getUserBaseline(body.userId) : null;
+  const recentTransactions = body.userId ? await getTodayTransactions(body.userId, timestamp) : [];
+  const { riskLevel, reason, triggeredRules } = judgeRisk(transaction, baseline, recentTransactions);
 
   const record: RiskRecord = {
     id: crypto.randomUUID(),
     amount,
+    userId: body.userId,
     type: body.type,
+    category: body.category,
     payeeAccount: body.payeeAccount,
     region: body.region,
     productRiskGrade: body.productRiskGrade,
     riskLevel,
     reason,
-    timestamp: new Date().toISOString(),
+    triggeredRules,
+    timestamp,
   };
 
   const history = await readJSON<RiskRecord[]>("risk-history.json");
