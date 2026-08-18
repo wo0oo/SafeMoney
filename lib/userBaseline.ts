@@ -1,6 +1,6 @@
 import { readJSON, writeJSON } from "@/lib/db";
 
-// R1~R8 탐지 규칙(회의록 "이상 금융행동 탐지 규칙 초안" 섹션 1)이 참조하는
+// R1~R7 탐지 규칙(회의록 "이상 금융행동 탐지 규칙 초안" 섹션 1)이 참조하는
 // 사용자별 평소 거래 패턴 통계. 고태현님이 실제 계산 로직으로 값을 채워 넣기 전까지는
 // data/user-baseline.json에 미리 계산된 값을 넣어두고 그대로 읽어옵니다.
 export type UserBaseline = {

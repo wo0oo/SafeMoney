@@ -8,7 +8,7 @@ export type TransactionInput = {
   amount: number;
   userId?: string;
   type?: TransactionType;
-  category?: string; // R8(소비 카테고리 이상)이 baseline.typicalCategories와 비교할 업종
+  category?: string; // R7(소비 카테고리 이상)이 baseline.typicalCategories와 비교할 업종
   payeeAccount?: string;
   region?: string;
   productRiskGrade?: ProductRiskGrade;
@@ -18,7 +18,7 @@ export type TransactionInput = {
 export type RiskJudgement = {
   riskLevel: RiskLevel;
   reason: string;
-  triggeredRules?: string[]; // 걸린 규칙 ID(R1~R8, C1~C3). 이메일 트리거·프롬프트팀 설명 근거로 재사용
+  triggeredRules?: string[]; // 걸린 규칙 ID(R1~R7, C1~C3). 이메일 트리거·프롬프트팀 설명 근거로 재사용
 };
 
 // check-risk가 기록/조회하는 위험 판정 이력 한 건. lib/riskHistory.ts의 getTodayTransactions()가 이 타입으로 조회해옵니다.
@@ -37,11 +37,11 @@ export type RiskRecord = {
   timestamp: string;
 };
 
-// @고태현 — 여기가 R1~R8 + 콤보(C1~C3) 실제 탐지 로직 들어갈 자리입니다.
+// @고태현 — 여기가 R1~R7 + 콤보(C1~C3) 실제 탐지 로직 들어갈 자리입니다.
 // baseline: getUserBaseline()으로 조회한 값, 콜드스타트(베이스라인 없음)면 null.
 // recentTransactions: getTodayTransactions()로 조회한 "오늘, 이 거래 이전"의 같은 사용자 이력 (시간순 정렬).
 //   - R4(10분/30분 내 연속거래): 여기서 timestamp로 원하는 시간창을 걸러서 건수를 세시면 됩니다.
-//   - R8(일 소비 5배): 여기 record들의 amount를 합산하면 오늘 누적 소비액이 됩니다.
+//   - R7(일 소비 5배): 여기 record들의 amount를 합산하면 오늘 누적 소비액이 됩니다.
 //   - "오늘" 기준은 timestamp의 UTC 날짜(yyyy-mm-dd)로 단순화했습니다. KST 자정 경계 보정이 필요하면 riskHistory.ts를 고쳐주세요.
 // triggeredRules: 걸린 규칙 ID를 다 담아주세요(예: ["R4", "C1"]). 콤보(C1~C3)는 riskLevel을 항상 "High"로 반환하기로
 //   확인했습니다 — 백엔드 이메일 발송 트리거가 riskLevel=High 기준 하나로만 동작합니다.
