@@ -91,6 +91,15 @@ export async function GET() {
 - 위험도 판정 스키마(`riskLevel`, `reason` 등 필드명)는 데이터/AI 담당이 정한 형태를 그대로 따릅니다. 임의로 필드명을 바꾸지 않습니다.
 - 이메일 발송 트리거 기준(몇 단계 위험도부터 보낼지)은 탐지 로직 담당과 사전 합의 후 구현합니다.
 
+## 환경변수
+
+`lib/generateReason.ts`(Gemini 기반 reason 생성)를 사용하려면 아래 환경변수가 필요합니다. 로컬은 `.env.local`(git 추적 제외)에 설정하고, 배포 환경은 Vercel 프로젝트 설정의 Environment Variables에 동일하게 등록하세요.
+
+| 변수 | 필수 | 설명 |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | 필수 | Google AI Studio에서 발급한 Gemini API 키 |
+| `GEMINI_REASON_MODEL` | 선택 | 사용할 모델명. 기본값 `gemini-3.6-flash`(회귀 테스트에 사용한 모델). 계정에서 사용 불가능하면 재설정 필요 |
+
 ## 배포
 
 Vercel 배포 연결 완료 (https://safemoney-gamma.vercel.app, 프로젝트 `wo0oos-projects/safemoney`). GitHub 레포에 push하면 자동 배포됩니다.
