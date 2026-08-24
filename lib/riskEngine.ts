@@ -8,7 +8,7 @@ export type TransactionInput = {
   amount: number;
   userId?: string;
   type?: TransactionType;
-  category?: string; // R8(소비 카테고리 이상)이 baseline.typicalCategories와 비교할 업종
+  merchantCategory?: string; // R8(소비 카테고리 이상)이 baseline.typicalCategories와 비교할 업종
   payeeAccount?: string;
   region?: string;
   productRiskGrade?: ProductRiskGrade;
@@ -27,7 +27,7 @@ export type RiskRecord = {
   amount: number;
   userId?: string;
   type?: TransactionType;
-  category?: string;
+  merchantCategory?: string;
   payeeAccount?: string;
   region?: string;
   productRiskGrade?: ProductRiskGrade;
