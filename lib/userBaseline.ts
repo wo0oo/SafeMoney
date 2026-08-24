@@ -13,6 +13,7 @@ export type UserBaseline = {
   activeHours: [number, number];
   typicalCategories: string[];
   usualRegion: string;
+  guardianEmail?: string; // 위험 알림 이메일 수신자. 보호자 동의/등록 화면이 아직 없어 임시로 baseline에 둠 — 화면 나오면 그쪽 데이터로 옮길 예정
 };
 
 // 베이스라인이 없는 사용자(콜드스타트)는 null을 반환합니다.
