@@ -3,6 +3,7 @@ import { readJSON, writeJSON } from "@/lib/db";
 import { getUserBaseline } from "@/lib/userBaseline";
 import { getTodayTransactions } from "@/lib/riskHistory";
 import { judgeRisk, TransactionInput, RiskRecord } from "@/lib/riskEngine";
+import { nowKstIso } from "@/lib/time";
 
 // userId/type/category/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
 // 필요로 하는 거래 필드. judgeRisk()가 실제 로직으로 바뀌기 전까지는 값만 받아서
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "amount는 숫자여야 합니다." }, { status: 400 });
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp = nowKstIso();
   const transaction: TransactionInput = {
     amount,
     userId: body.userId,
