@@ -5,6 +5,8 @@ import { list, put, get } from "@vercel/blob";
 // userId·거래 내역 등 개인 금융정보가 포함돼 있어 access는 private으로 고정합니다.
 // 로컬 개발도 동일하게 Blob을 사용하므로 프로젝트에 BLOB_STORE_ID(OIDC 인증) 또는
 // BLOB_READ_WRITE_TOKEN이 필요합니다 (Vercel 대시보드 → Storage → Blob store).
+
+// {fileName} blob을 찾아 JSON 파싱. 파일 내용이 실제로 T 형태라고 가정합니다(런타임 검증 없음).
 export async function readJSON<T>(fileName: string): Promise<T> {
   const { blobs } = await list({ prefix: fileName, limit: 1 });
   const blob = blobs.find((b) => b.pathname === fileName);
@@ -22,6 +24,7 @@ export async function readJSON<T>(fileName: string): Promise<T> {
   return JSON.parse(text) as T;
 }
 
+// {fileName} blob에 JSON으로 덮어쓰기 저장 (2-space indent, private access 유지).
 export async function writeJSON<T>(fileName: string, data: T): Promise<void> {
   await put(fileName, JSON.stringify(data, null, 2), {
     access: "private",
