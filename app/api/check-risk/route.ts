@@ -4,7 +4,7 @@ import { getUserBaseline } from "@/lib/userBaseline";
 import { getTodayTransactions } from "@/lib/riskHistory";
 import { judgeRisk, TransactionInput, RiskRecord } from "@/lib/riskEngine";
 
-// userId/type/category/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
+// userId/type/merchantCategory/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
 // 필요로 하는 거래 필드. judgeRisk()가 실제 로직으로 바뀌기 전까지는 값만 받아서
 // 기록에 같이 저장해두고, 판정 자체는 아직 amount 더미 규칙만 사용합니다.
 // POST /api/check-risk → 거래 하나를 판정하고 위험 이력(risk-history.json)에 기록
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     amount,
     userId: body.userId,
     type: body.type,
-    category: body.category,
+    merchantCategory: body.merchantCategory,
     payeeAccount: body.payeeAccount,
     region: body.region,
     productRiskGrade: body.productRiskGrade,
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     amount,
     userId: body.userId,
     type: body.type,
-    category: body.category,
+    merchantCategory: body.merchantCategory,
     payeeAccount: body.payeeAccount,
     region: body.region,
     productRiskGrade: body.productRiskGrade,

@@ -8,7 +8,7 @@ export type TransactionInput = {
   amount: number; // 거래 금액(원)
   userId?: string; // 사용자 ID. 베이스라인 조회 키. 없으면 baseline=null(콜드스타트 취급)
   type?: TransactionType; // 거래 유형(이체/출금/결제/상품가입)
-  category?: string; // R8용 — 소비 업종. baseline.typicalCategories와 비교
+  merchantCategory?: string; // R8용 — 소비 업종. baseline.typicalCategories와 비교
   payeeAccount?: string; // 수취 계좌. 이체/출금 시에만 옴
   region?: string; // 거래 발생 지역
   productRiskGrade?: ProductRiskGrade; // 상품 위험등급. type: "product"일 때만 의미 있음
@@ -27,7 +27,7 @@ export type RiskRecord = {
   amount: number; // 거래 금액(원)
   userId?: string; // 거래한 사용자 ID
   type?: TransactionType; // 거래 유형
-  category?: string; // 소비 업종
+  merchantCategory?: string; // 소비 업종
   payeeAccount?: string; // 수취 계좌
   region?: string; // 거래 지역
   productRiskGrade?: ProductRiskGrade; // 상품 위험등급
