@@ -11,7 +11,7 @@ type RiskRecord = {
   amount: number;
   userId?: string;
   type?: TransactionType;
-  category?: string;
+  merchantCategory?: string;
   payeeAccount?: string;
   region?: string;
   productRiskGrade?: ProductRiskGrade;
@@ -102,7 +102,7 @@ export default function DemoPage() {
           amount: numericAmount,
           userId: userId.trim() || undefined,
           type,
-          category: category.trim() || undefined,
+          merchantCategory: category.trim() || undefined,
           payeeAccount: payeeAccount.trim() || undefined,
           region: region.trim() || undefined,
           productRiskGrade,
@@ -211,7 +211,7 @@ export default function DemoPage() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">소비 카테고리 (category)</span>
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">소비 카테고리 (merchantCategory)</span>
               <input
                 type="text"
                 value={category}
