@@ -5,36 +5,36 @@ export type ProductRiskGrade = "low" | "mid" | "high" | "very_high" | "none";
 export type RiskLevel = "Low" | "Medium" | "High";
 
 export type TransactionInput = {
-  amount: number;
-  userId?: string;
-  type?: TransactionType;
-  merchantCategory?: string; // R8(소비 카테고리 이상)이 baseline.typicalCategories와 비교할 업종
-  payeeAccount?: string;
-  region?: string;
-  productRiskGrade?: ProductRiskGrade;
-  timestamp: string;
+  amount: number; // 거래 금액(원)
+  userId?: string; // 사용자 ID. 베이스라인 조회 키. 없으면 baseline=null(콜드스타트 취급)
+  type?: TransactionType; // 거래 유형(이체/출금/결제/상품가입)
+  merchantCategory?: string; // R8용 — 소비 업종. baseline.typicalCategories와 비교
+  payeeAccount?: string; // 수취 계좌. 이체/출금 시에만 옴
+  region?: string; // 거래 발생 지역
+  productRiskGrade?: ProductRiskGrade; // 상품 위험등급. type: "product"일 때만 의미 있음
+  timestamp: string; // ISO 8601, 이번 거래 시각
 };
 
 export type RiskJudgement = {
-  riskLevel: RiskLevel;
-  reason: string;
+  riskLevel: RiskLevel; // 위험도 판정 결과. 화면 모달/색상 분기 및 이메일 발송 트리거 기준
+  reason: string; // 판정 사유 텍스트. 화면에 그대로 표시됨
   triggeredRules?: string[]; // 걸린 규칙 ID(R1~R8, C1~C3). 이메일 트리거·프롬프트팀 설명 근거로 재사용
 };
 
 // check-risk가 기록/조회하는 위험 판정 이력 한 건. lib/riskHistory.ts의 getTodayTransactions()가 이 타입으로 조회해옵니다.
 export type RiskRecord = {
-  id: string;
-  amount: number;
-  userId?: string;
-  type?: TransactionType;
-  merchantCategory?: string;
-  payeeAccount?: string;
-  region?: string;
-  productRiskGrade?: ProductRiskGrade;
-  riskLevel: RiskLevel;
-  reason: string;
-  triggeredRules?: string[];
-  timestamp: string;
+  id: string; // 레코드 고유 ID
+  amount: number; // 거래 금액(원)
+  userId?: string; // 거래한 사용자 ID
+  type?: TransactionType; // 거래 유형
+  merchantCategory?: string; // 소비 업종
+  payeeAccount?: string; // 수취 계좌
+  region?: string; // 거래 지역
+  productRiskGrade?: ProductRiskGrade; // 상품 위험등급
+  riskLevel: RiskLevel; // 이 거래의 위험 판정 결과
+  reason: string; // 판정 사유
+  triggeredRules?: string[]; // 걸린 규칙 ID 전부
+  timestamp: string; // ISO 8601, 판정(저장) 시각
 };
 
 // @고태현 — 여기가 R1~R8 + 콤보(C1~C3) 실제 탐지 로직 들어갈 자리입니다.
