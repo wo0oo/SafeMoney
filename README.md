@@ -93,12 +93,13 @@ export async function GET() {
 
 ## 환경변수
 
-`lib/generateReason.ts`(Gemini 기반 reason 생성)를 사용하려면 아래 환경변수가 필요합니다. 로컬은 `.env.local`(git 추적 제외)에 설정하고, 배포 환경은 Vercel 프로젝트 설정의 Environment Variables에 동일하게 등록하세요.
+`lib/generateReason.ts`(시니어용 reason 생성), `lib/generateGuardianEmail.ts`(보호자 이메일 생성)를 사용하려면 아래 환경변수가 필요합니다. 로컬은 `.env.local`(git 추적 제외)에 설정하고, 배포 환경은 Vercel 프로젝트 설정의 Environment Variables에 동일하게 등록하세요.
 
 | 변수 | 필수 | 설명 |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | 필수 | Google AI Studio에서 발급한 Gemini API 키 |
-| `GEMINI_REASON_MODEL` | 선택 | 사용할 모델명. 기본값 `gemini-3.6-flash`(회귀 테스트에 사용한 모델). 계정에서 사용 불가능하면 재설정 필요 |
+| `GEMINI_API_KEY` | 필수 | Google AI Studio에서 발급한 Gemini API 키. 두 함수가 공유 |
+| `GEMINI_REASON_MODEL` | 선택 | reason 생성에 쓸 모델명. 기본값 `gemini-3.6-flash`(회귀 테스트에 사용한 모델). 계정에서 사용 불가능하면 재설정 필요 |
+| `GEMINI_GUARDIAN_EMAIL_MODEL` | 선택 | 보호자 이메일 생성에 쓸 모델명. 기본값 `gemini-3.6-flash`. 리즌용과 다른 모델을 쓰고 싶을 때만 설정 |
 
 ## 배포
 
