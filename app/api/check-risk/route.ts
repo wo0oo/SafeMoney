@@ -6,9 +6,9 @@ import { judgeRisk, TransactionInput, RiskRecord } from "@/lib/riskEngine";
 import { nowKstIso } from "@/lib/time";
 import { sendGuardianAlertEmail } from "@/lib/sendGuardianAlert";
 
-// userId/type/merchantCategory/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R8)이
-// 필요로 하는 거래 필드. judgeRisk()가 실제 로직으로 바뀌기 전까지는 값만 받아서
-// 기록에 같이 저장해두고, 판정 자체는 아직 amount 더미 규칙만 사용합니다.
+// userId/type/merchantCategory/payeeAccount/region/productRiskGrade는 태현님(데이터/AI) 탐지 규칙(R1~R7)이
+// 필요로 하는 거래 필드. userId/type/baseline이 모두 있으면 judgeRisk()가 실제 탐지 모델
+// (model/judgeRisk.ts)을 호출하고, 그렇지 않으면(콜드스타트) amount 더미 규칙으로 판정합니다.
 // POST /api/check-risk → 거래 하나를 판정하고 위험 이력(risk-history.json)에 기록
 export async function POST(request: NextRequest) {
   const body = await request.json();
