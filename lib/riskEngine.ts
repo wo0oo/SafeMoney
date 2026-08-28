@@ -47,13 +47,13 @@ export type RiskRecord = {
 
 // baseline: getUserBaseline()으로 조회한 값, 콜드스타트(베이스라인 없음)면 null.
 // recentTransactions: getTodayTransactions()로 조회한 "오늘, 이 거래 이전"의 같은 사용자 이력 (시간순 정렬).
-// 태현님(데이터/AI) 실제 탐지 로직(model/judgeRisk.ts)을 호출합니다. model 쪽 Transaction/UserBaseline은
-// userId·type을 필수로 요구하고 baseline도 null을 허용하지 않아서(콜드스타트 fallback 미구현),
-// 이 정보가 없는 요청은 아직 더미 로직(dummyJudge)으로 우회합니다.
+// 태현님(데이터/AI) 실제 탐지 로직(model/judgeRisk.ts)을 호출합니다. model 쪽은 이제 baseline=null(콜드스타트)도
+// 절대 임계값으로 안전하게 처리하므로(#13/#14) 그대로 넘깁니다. userId·type은 model 쪽 Transaction이 여전히
+// 필수로 요구해서, 이 두 값이 없는 요청만 더미 로직(dummyJudge)으로 우회합니다.
 export function judgeRisk(transaction: TransactionInput, baseline: UserBaseline | null, recentTransactions: RiskRecord[]): RiskJudgement {
   const { amount, userId, type } = transaction;
 
-  if (!baseline || !userId || !type) {
+  if (!userId || !type) {
     return dummyJudge(amount);
   }
 
@@ -98,8 +98,9 @@ export function judgeRisk(transaction: TransactionInput, baseline: UserBaseline 
   };
 }
 
-// baseline 없음(콜드스타트) 또는 userId/type 미기재 시 쓰는 금액 기준 더미 판정.
-// model 쪽에 콜드스타트 fallback(절대 임계 + 가중치 하향)이 들어오면 이 자리를 대체할 예정입니다.
+// userId/type이 아예 없는 요청(모델이 Transaction을 구성할 수 없는 경우)에만 쓰는 금액 기준
+// 더미 판정. baseline 없음(콜드스타트)은 이제 model/judgeRisk.ts가 절대 임계값으로 직접
+// 처리하므로(#13/#14) 여기로 빠지지 않습니다.
 function dummyJudge(amount: number): RiskJudgement {
   if (amount >= 3000000) {
     return { riskLevel: "High", reason: "평소보다 지나치게 큰 금액의 거래입니다." };
