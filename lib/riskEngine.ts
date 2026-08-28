@@ -1,6 +1,6 @@
 import { UserBaseline } from "@/lib/userBaseline";
 import { judgeRisk as runDetectionModel } from "@/model/judgeRisk";
-import { Transaction as ModelTransaction } from "@/model/types";
+import { Transaction as ModelTransaction, RuleHit, ComboHit } from "@/model/types";
 
 export type TransactionType = "transfer" | "withdrawal" | "payment" | "product";
 export type ProductRiskGrade = "low" | "mid" | "high" | "very_high" | "none";
@@ -21,6 +21,12 @@ export type RiskJudgement = {
   riskLevel: RiskLevel; // 위험도 판정 결과. 화면 모달/색상 분기 및 이메일 발송 트리거 기준
   reason: string; // 판정 사유 텍스트. 화면에 그대로 표시됨
   triggeredRules?: string[]; // 걸린 규칙 ID(R1~R7, C1~C3). 이메일 트리거·프롬프트팀 설명 근거로 재사용
+  // 프롬프트팀(Gemini reason/보호자 이메일 생성)이 필요로 하는 구조화된 근거.
+  // 실제 탐지 모델을 탄 경우에만 채워지고, 콜드스타트 더미 판정(dummyJudge)에서는 비어있다.
+  ruleHits?: RuleHit[];
+  comboHits?: ComboHit[];
+  guardianAlert?: boolean;
+  holdRecommended?: boolean;
 };
 
 // check-risk가 기록/조회하는 위험 판정 이력 한 건. lib/riskHistory.ts의 getTodayTransactions()가 이 타입으로 조회해옵니다.
@@ -85,6 +91,10 @@ export function judgeRisk(transaction: TransactionInput, baseline: UserBaseline 
     riskLevel: result.riskLevel,
     reason: result.reason,
     triggeredRules: [...result.ruleHits.map((hit) => hit.id), ...result.comboHits.map((combo) => combo.id)],
+    ruleHits: result.ruleHits,
+    comboHits: result.comboHits,
+    guardianAlert: result.guardianAlert,
+    holdRecommended: result.holdRecommended,
   };
 }
 

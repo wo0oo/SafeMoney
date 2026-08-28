@@ -16,6 +16,16 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, JudgeResult } from "@/model/types";
 import { REASON_SYSTEM_PROMPT } from "@/lib/prompts/reasonSystemPrompt";
 
+/**
+ * 이 함수가 실제로 필요로 하는 필드만 뽑은 타입. 전체 JudgeResult(score 포함)를
+ * 강제하지 않아서, score 없이 ruleHits/comboHits/guardianAlert/holdRecommended만
+ * 채워주는 호출부(lib/riskEngine.ts 등)에서도 그대로 넘길 수 있다.
+ */
+export type ReasonInput = Pick<
+  JudgeResult,
+  "riskLevel" | "ruleHits" | "comboHits" | "guardianAlert" | "holdRecommended"
+>;
+
 const MODEL = process.env.GEMINI_REASON_MODEL ?? "gemini-3.6-flash";
 
 let cachedClient: GoogleGenAI | null = null;
@@ -32,7 +42,7 @@ function getClient(): GoogleGenAI {
 }
 
 /** 프롬프트 문서 2절 입력 스키마와 동일한 페이로드로 변환. score는 스키마에 없으므로 보내지 않는다. */
-function buildPayload(transaction: Transaction, result: JudgeResult) {
+function buildPayload(transaction: Transaction, result: ReasonInput) {
   return {
     transaction: {
       id: transaction.id,
@@ -76,7 +86,7 @@ function unwrapCodeFence(text: string): string {
  */
 export async function generateReason(
   transaction: Transaction,
-  result: JudgeResult
+  result: ReasonInput
 ): Promise<string> {
   const ai = getClient();
 

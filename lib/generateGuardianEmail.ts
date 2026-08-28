@@ -15,6 +15,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, JudgeResult } from "@/model/types";
 import { GUARDIAN_EMAIL_SYSTEM_PROMPT } from "@/lib/prompts/guardianEmailPrompt";
 
+/** lib/generateReason.ts의 ReasonInput과 동일한 이유로 score를 뺀 부분 타입. */
+export type GuardianEmailInput = Pick<
+  JudgeResult,
+  "riskLevel" | "ruleHits" | "comboHits" | "guardianAlert" | "holdRecommended"
+>;
+
 const MODEL = process.env.GEMINI_GUARDIAN_EMAIL_MODEL ?? "gemini-3.6-flash";
 
 let cachedClient: GoogleGenAI | null = null;
@@ -31,7 +37,7 @@ function getClient(): GoogleGenAI {
 }
 
 /** 프롬프트 입력 스키마와 동일한 페이로드로 변환. score는 스키마에 없으므로 보내지 않는다. */
-function buildPayload(transaction: Transaction, result: JudgeResult) {
+function buildPayload(transaction: Transaction, result: GuardianEmailInput) {
   return {
     transaction: {
       id: transaction.id,
@@ -83,7 +89,7 @@ function unwrapCodeFence(text: string): string {
  */
 export async function generateGuardianEmail(
   transaction: Transaction,
-  result: JudgeResult
+  result: GuardianEmailInput
 ): Promise<GuardianEmailContent> {
   const ai = getClient();
 
