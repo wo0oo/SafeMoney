@@ -1,0 +1,1 @@
+import { GuardianShell } from "@/components/guardian-shell";import { ConnectionForm } from "@/components/connection-form";export default function Page(){return <GuardianShell title="연결된 가족" active="family"><p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">새로운 피보호자를 등록합니다</p><ConnectionForm kind="protected"/></GuardianShell>}

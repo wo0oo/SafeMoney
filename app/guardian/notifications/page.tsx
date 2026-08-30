@@ -1,0 +1,1 @@
+import { GuardianShell } from "@/components/guardian-shell";import { GuardianRecords } from "@/components/guardian-records";export default function Page(){return <GuardianShell title="알림" active="notifications"><p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">금융 위험 활동 알림을 확인합니다.</p><GuardianRecords mode="notifications"/></GuardianShell>}
