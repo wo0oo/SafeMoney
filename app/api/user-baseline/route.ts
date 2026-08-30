@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     activeHours: Array.isArray(body.activeHours) && body.activeHours.length === 2 ? body.activeHours : [0, 24],
     typicalCategories: Array.isArray(body.typicalCategories) ? body.typicalCategories : [],
     usualRegion: typeof body.usualRegion === "string" ? body.usualRegion : "",
+    guardianEmail: typeof body.guardianEmail === "string" ? body.guardianEmail : undefined,
   };
 
   return NextResponse.json(await upsertUserBaseline(baseline));
