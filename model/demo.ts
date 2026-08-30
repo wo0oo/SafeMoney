@@ -25,11 +25,17 @@ const base: UserBaseline = {
 };
 
 /** 단건 시나리오 실행 헬퍼 */
-function run(label: string, tx: Transaction, expected: RiskLevel, priors: Transaction[] = []) {
+function run(
+  label: string,
+  tx: Transaction,
+  expected: RiskLevel,
+  priors: Transaction[] = [],
+  baseline: UserBaseline | null = base
+) {
   resetHistory();
   priors.forEach(recordTransaction);
   const recent = getTodayTransactions(tx.userId, tx.timestamp);
-  const res = judgeRisk(tx, base, recent);
+  const res = judgeRisk(tx, baseline, recent);
   const ok = res.riskLevel === expected ? "✅" : "❌";
   const rules = res.ruleHits.map((h) => `${h.id}(+${h.weight})`).join("·") || "없음";
   const combos = res.comboHits.map((c) => c.id).join("·") || "-";
@@ -89,3 +95,15 @@ run("E 고위험상품", {
     timestamp: `${D}T13:05:00+09:00`,
   }, "High", priors);
 }
+
+// G. 콜드스타트(베이스라인 없음): 300만원 신규계좌 이체 → High (절대 임계값 fallback)
+run("G 콜드스타트 고액이체", {
+  id: "G", userId: "u_02", type: "transfer", amount: 3_000_000,
+  timestamp: `${D}T14:00:00+09:00`, payeeAccount: "110-***-5555",
+}, "High", [], null);
+
+// H. 콜드스타트: 새벽 2시 소액 결제(1.5만원) → Low, 크래시 없이 정상 처리 (R3만 걸리고 임계값 미달)
+run("H 콜드스타트 새벽소액", {
+  id: "H", userId: "u_02", type: "payment", amount: 15_000,
+  timestamp: `${D}T02:00:00+09:00`, merchantCategory: "grocery",
+}, "Low", [], null);

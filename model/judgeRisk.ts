@@ -41,10 +41,12 @@ function buildReason(hits: RuleHit[], combos: ComboHit[]): string {
  * 메인 진입점. 백엔드 judgeRisk() 계약:
  *   judgeRisk(transaction, baseline, recentTransactions)
  * recentTransactions는 lib/riskHistory.getTodayTransactions()의 반환값.
+ * baseline이 null이면 콜드스타트(신규 사용자, 베이스라인 미생성) — 각 규칙이
+ * config.ts의 coldStart 절대 임계값으로 대체 판단한다 (model/rules.ts 참고).
  */
 export function judgeRisk(
   tx: Transaction,
-  baseline: UserBaseline,
+  baseline: UserBaseline | null,
   recentTransactions: Transaction[] = []
 ): JudgeResult {
   const ruleHits = evaluateRules(tx, baseline, recentTransactions);

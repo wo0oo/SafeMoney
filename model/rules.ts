@@ -9,9 +9,15 @@ import { Transaction, UserBaseline, RuleHit, ComboHit } from "./types";
 
 // ---------- 개별 규칙 ----------
 
-/** R1 고액 이체: r = amount / avgTransfer */
-export function ruleR1(tx: Transaction, base: UserBaseline): RuleHit | null {
+/** R1 고액 이체: r = amount / avgTransfer. 베이스라인 없으면(콜드스타트) 절대 임계값으로 대체 */
+export function ruleR1(tx: Transaction, base: UserBaseline | null): RuleHit | null {
   if (tx.type !== "transfer") return null;
+  if (!base) {
+    const c = CFG.coldStart.r1;
+    if (tx.amount >= c.absoluteMin)
+      return { id: "R1", name: "고액 이체", weight: c.weight, reason: "베이스라인 없는 신규 사용자의 고액 이체", meta: { coldStart: true } };
+    return null;
+  }
   if (base.avgTransfer <= 0) return null;
   const r = tx.amount / base.avgTransfer;
   const c = CFG.r1;
@@ -24,22 +30,23 @@ export function ruleR1(tx: Transaction, base: UserBaseline): RuleHit | null {
   return { id: "R1", name: "고액 이체", weight, reason, meta: { r } };
 }
 
-/** R2 신규 수취인: 이체 수취계좌가 knownPayees에 없음 */
-export function ruleR2(tx: Transaction, base: UserBaseline): RuleHit | null {
+/** R2 신규 수취인: 이체 수취계좌가 knownPayees에 없음. 베이스라인 없으면(콜드스타트) 전부 신규 취급 */
+export function ruleR2(tx: Transaction, base: UserBaseline | null): RuleHit | null {
   if (tx.type !== "transfer") return null;
   if (!tx.payeeAccount) return null;
-  if (base.knownPayees.includes(tx.payeeAccount)) return null;
+  if (base?.knownPayees.includes(tx.payeeAccount)) return null;
   return { id: "R2", name: "신규 수취인", weight: CFG.r2.weight, reason: "처음 거래하는 계좌" };
 }
 
-/** R3 비활동시간 거래: 거래 시각이 activeHours 밖 */
-export function ruleR3(tx: Transaction, base: UserBaseline): RuleHit | null {
+/** R3 비활동시간 거래: 거래 시각이 activeHours 밖. 베이스라인 없으면(콜드스타트) 시스템 기본 활동시간 사용 */
+export function ruleR3(tx: Transaction, base: UserBaseline | null): RuleHit | null {
   const hour = localHour(tx.timestamp);
-  const [start, end] = base.activeHours;
+  const [start, end] = base?.activeHours ?? CFG.coldStart.activeHours;
   const active =
     start <= end ? hour >= start && hour <= end : hour >= start || hour <= end;
   if (active) return null;
-  return { id: "R3", name: "비활동시간 거래", weight: CFG.r3.weight, reason: "평소 거래하지 않는 시간대" };
+  const reason = base ? "평소 거래하지 않는 시간대" : "심야·새벽 시간대 거래 (신규 사용자)";
+  return { id: "R3", name: "비활동시간 거래", weight: CFG.r3.weight, reason };
 }
 
 /** R4 단기 연속 거래: 이체/출금 반복. 최댓값 1건만 적용 */
@@ -61,10 +68,15 @@ export function ruleR4(tx: Transaction, recent: Transaction[]): RuleHit | null {
   return null;
 }
 
-/** R5 고액 현금 인출: 출금 ≥ 5×avgWithdrawal AND ≥ 100만원 */
-export function ruleR5(tx: Transaction, base: UserBaseline): RuleHit | null {
+/** R5 고액 현금 인출: 출금 ≥ 5×avgWithdrawal AND ≥ 100만원. 베이스라인 없으면(콜드스타트) 절대 임계값만 적용 */
+export function ruleR5(tx: Transaction, base: UserBaseline | null): RuleHit | null {
   if (tx.type !== "withdrawal") return null;
   const c = CFG.r5;
+  if (!base) {
+    if (tx.amount >= c.absoluteMin)
+      return { id: "R5", name: "고액 현금 인출", weight: c.weight, reason: "베이스라인 없는 신규 사용자의 고액 현금 인출" };
+    return null;
+  }
   if (tx.amount >= c.multiplier * base.avgWithdrawal && tx.amount >= c.absoluteMin)
     return { id: "R5", name: "고액 현금 인출", weight: c.weight, reason: "평소보다 큰 현금 인출 (전달책 패턴)" };
   return null;
@@ -85,17 +97,24 @@ export function ruleR6(tx: Transaction): RuleHit | null {
   return { id: "R6", name: "고위험 상품 가입", weight, reason: reasonMap[g] };
 }
 
-/** R7 소비 카테고리 이상: 신규 업종에서 당일 소비 ≥ 5×dailySpendAvg */
-export function ruleR7(tx: Transaction, base: UserBaseline, recent: Transaction[]): RuleHit | null {
+/** R7 소비 카테고리 이상: 신규 업종에서 당일 소비 ≥ 5×dailySpendAvg. 베이스라인 없으면(콜드스타트) 절대 임계값 적용 */
+export function ruleR7(tx: Transaction, base: UserBaseline | null, recent: Transaction[]): RuleHit | null {
   if (tx.type !== "payment") return null;
   if (!tx.merchantCategory) return null;
-  if (base.typicalCategories.includes(tx.merchantCategory)) return null;
+  if (base && base.typicalCategories.includes(tx.merchantCategory)) return null;
 
   // 당일 같은 신규 업종 결제 합산 (+ 현재 거래)
   const daySpend =
     recent
       .filter((t) => t.type === "payment" && t.merchantCategory === tx.merchantCategory)
       .reduce((s, t) => s + t.amount, 0) + tx.amount;
+
+  if (!base) {
+    const c = CFG.coldStart.r7;
+    if (daySpend >= c.absoluteMin)
+      return { id: "R7", name: "소비 카테고리 이상", weight: c.weight, reason: "베이스라인 없는 신규 사용자의 고액 소비" };
+    return null;
+  }
 
   if (daySpend >= CFG.r7.multiplier * base.dailySpendAvg)
     return { id: "R7", name: "소비 카테고리 이상", weight: CFG.r7.weight, reason: "평소와 다른 소비 패턴" };
@@ -105,7 +124,7 @@ export function ruleR7(tx: Transaction, base: UserBaseline, recent: Transaction[
 /** 개별 규칙 전체 평가 */
 export function evaluateRules(
   tx: Transaction,
-  base: UserBaseline,
+  base: UserBaseline | null,
   recent: Transaction[]
 ): RuleHit[] {
   return [
@@ -121,12 +140,18 @@ export function evaluateRules(
 
 // ---------- 조합 규칙 ----------
 
-/** C1: R1(r≥10) & R2 → +25, 최소 High */
-function comboC1(hits: RuleHit[]): ComboHit | null {
+/**
+ * C1: R1(r≥10) & R2 → +25, 최소 High.
+ * 콜드스타트로 R1이 절대 임계값으로 잡힌 경우(meta.coldStart) r을 못 구하므로,
+ * 대신 금액이 combo1AbsoluteMin 이상이면 동일하게 발동시킨다.
+ */
+function comboC1(hits: RuleHit[], tx: Transaction): ComboHit | null {
   const r1 = hits.find((h) => h.id === "R1");
   const r2 = hits.find((h) => h.id === "R2");
-  const r = (r1?.meta?.r as number) ?? 0;
-  if (r1 && r2 && r >= CFG.combo.c1.rThreshold)
+  if (!r1 || !r2) return null;
+  const ratioTrigger = ((r1.meta?.r as number) ?? 0) >= CFG.combo.c1.rThreshold;
+  const coldStartTrigger = r1.meta?.coldStart === true && tx.amount >= CFG.coldStart.combo1AbsoluteMin;
+  if (ratioTrigger || coldStartTrigger)
     return { id: "C1", bonus: CFG.combo.c1.bonus, forceGrade: "High", reason: "고액 이체 + 신규 수취인 (전형적 사기 패턴)" };
   return null;
 }
@@ -136,11 +161,12 @@ function comboC1(hits: RuleHit[]): ComboHit | null {
  * 두 신호는 보통 서로 다른 거래에 걸림(이체 후 인출). 현재 거래가 고액 인출(R5)이고,
  * 오늘 앞선 이력에 신규계좌 이체가 있으면 발동.
  */
-function comboC2(hits: RuleHit[], tx: Transaction, base: UserBaseline, recent: Transaction[]): ComboHit | null {
+function comboC2(hits: RuleHit[], tx: Transaction, base: UserBaseline | null, recent: Transaction[]): ComboHit | null {
   const r5 = hits.find((h) => h.id === "R5");
   if (!r5) return null;
+  const knownPayees = base?.knownPayees ?? [];
   const recentNewPayeeTransfer = recent.some(
-    (t) => t.type === "transfer" && !!t.payeeAccount && !base.knownPayees.includes(t.payeeAccount)
+    (t) => t.type === "transfer" && !!t.payeeAccount && !knownPayees.includes(t.payeeAccount)
   );
   if (recentNewPayeeTransfer)
     return { id: "C2", bonus: CFG.combo.c2.bonus, forceGrade: "High", guardianAlert: true, holdRecommended: true, reason: "신규 계좌 이체 후 고액 현금인출 (인출·전달책 패턴)" };
@@ -159,10 +185,10 @@ function comboC3(hits: RuleHit[]): ComboHit | null {
 export function evaluateCombos(
   hits: RuleHit[],
   tx: Transaction,
-  base: UserBaseline,
+  base: UserBaseline | null,
   recent: Transaction[]
 ): ComboHit[] {
-  return [comboC1(hits), comboC2(hits, tx, base, recent), comboC3(hits)].filter(
+  return [comboC1(hits, tx), comboC2(hits, tx, base, recent), comboC3(hits)].filter(
     (c): c is ComboHit => c !== null
   );
 }
