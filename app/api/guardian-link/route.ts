@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeJSON } from "@/lib/db";
 import {
   createGuardianLink,
   deleteGuardianLink,
@@ -7,22 +6,10 @@ import {
   listSeniorsForGuardian,
 } from "@/lib/guardianLink";
 
-// Initialize guardian-links.json in Blob store if it doesn't exist
-async function ensureGuardianLinksExists(): Promise<void> {
-  try {
-    await listGuardiansForSenior("__init__");
-  } catch {
-    // File doesn't exist, initialize it with empty array
-    await writeJSON("guardian-links.json", []);
-  }
-}
-
 // GET /api/guardian-link?seniorUserId=  → 그 시니어의 보호자 목록
 // GET /api/guardian-link?guardianEmail= → 그 보호자가 보는 피보호자(시니어) 목록
 // 최소 하나는 필수 — 둘 다 없으면 400.
 export async function GET(request: NextRequest) {
-  await ensureGuardianLinksExists();
-
   const seniorUserId = request.nextUrl.searchParams.get("seniorUserId");
   const guardianEmail = request.nextUrl.searchParams.get("guardianEmail");
 
@@ -42,8 +29,6 @@ export async function GET(request: NextRequest) {
 
 // POST /api/guardian-link → 연결 즉시 등록 (승인/대기 절차 없음)
 export async function POST(request: NextRequest) {
-  await ensureGuardianLinksExists();
-
   const body = await request.json();
 
   if (typeof body.seniorUserId !== "string" || body.seniorUserId.trim() === "") {
@@ -69,8 +54,6 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/guardian-link?id=
 export async function DELETE(request: NextRequest) {
-  await ensureGuardianLinksExists();
-
   const id = request.nextUrl.searchParams.get("id");
 
   if (!id) {
