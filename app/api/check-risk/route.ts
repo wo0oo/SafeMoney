@@ -161,8 +161,8 @@ export async function POST(request: NextRequest) {
 // GET /api/check-risk?seniorUserId=&guardianEmail=     → 그 조합이 GuardianLink로 연결돼 있어야 함(아니면 403)
 // GET /api/check-risk?guardianEmail= (seniorUserId 없이) → 400
 export async function GET(request: NextRequest) {
-  const seniorUserId = request.nextUrl.searchParams.get("seniorUserId");
-  const guardianEmail = request.nextUrl.searchParams.get("guardianEmail");
+  const seniorUserId = request.nextUrl.searchParams.get("seniorUserId")?.trim() || null;
+  const guardianEmail = request.nextUrl.searchParams.get("guardianEmail")?.trim() || null;
 
   if (!seniorUserId && guardianEmail) {
     return NextResponse.json(
@@ -173,6 +173,14 @@ export async function GET(request: NextRequest) {
 
   const history = await readJSON<RiskRecord[]>("risk-history.json");
 
+  // 주의: 아래 무파라미터 분기는 의도적으로 미인증 상태다 — seniorUserId 없이 호출되면
+  // 아래의 guardianEmail(seniorUserId+guardianEmail 조합) 접근 제어를 전혀 거치지 않고
+  // 모든 시니어의 전체 이력을 그대로 반환한다. app/demo/page.tsx(내부 테스트용 데모 페이지)가
+  // 파라미터 없이 이 엔드포인트를 호출하는 기존 동작과의 하위호환을 위해 남겨둔 것으로,
+  // 이 함수 안의 guardianEmail 403 체크가 엔드포인트 전체를 보호한다고 착각하면 안 된다 —
+  // 이 분기는 그 체크와 별개로 완전히 열려 있는 경로다. app/demo/page.tsx(또는 다른 호출부)가
+  // 항상 seniorUserId를 보내도록 수정되면, 이 무파라미터 분기는 제거하거나
+  // (예: 프로덕션 환경에서는 막는 등) 제한해야 한다.
   if (!seniorUserId) {
     return NextResponse.json(history);
   }
