@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
 import { getUserBaseline } from "@/lib/userBaseline";
-import { listGuardiansForSenior } from "@/lib/guardianLink";
+import { findGuardianLink, listGuardiansForSenior } from "@/lib/guardianLink";
 import { getTodayTransactions } from "@/lib/riskHistory";
 import { judgeRisk, TransactionInput, RiskRecord, RiskJudgement } from "@/lib/riskEngine";
 import { nowKstIso } from "@/lib/time";
@@ -116,7 +116,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (guardianLinks.length > 0) {
+  // alertEnabled가 명시적으로 false인 보호자는 발송 대상에서 제외한다(미지정/true면 발송).
+  const alertRecipients = guardianLinks.filter((link) => link.alertEnabled !== false);
+
+  if (alertRecipients.length > 0) {
     let subject = `[SafeMoney] ${riskLevel} 위험 거래 감지`;
     let emailBody = [
       `${amount.toLocaleString("ko-KR")}원 거래에서 ${riskLevel} 등급 위험이 감지됐습니다.`,
@@ -141,7 +144,7 @@ export async function POST(request: NextRequest) {
     // 보호자가 여러 명일 수 있어(1 시니어 : N 보호자) 한 번에 여러 명을 to에 넣지 않고
     // 개별 발송한다 — 보호자끼리 서로의 이메일이 노출되지 않게 하기 위해서다.
     // 한 명 발송 실패가 다른 보호자에게 가는 발송을 막으면 안 되므로 각자 개별적으로 감싼다.
-    for (const link of guardianLinks) {
+    for (const link of alertRecipients) {
       try {
         await sendGuardianAlertEmail({ to: link.guardianEmail, subject, body: emailBody });
       } catch (error) {
@@ -153,8 +156,36 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(record);
 }
 
-// GET /api/check-risk → 전체 위험 판정 이력 조회
-export async function GET() {
+// GET /api/check-risk                                → 전체 이력 조회(파라미터 없음, 기존 동작 하위호환)
+// GET /api/check-risk?seniorUserId=                   → 그 시니어 이력만 필터링(별도 인증 없음 — 시니어 본인 조회용)
+// GET /api/check-risk?seniorUserId=&guardianEmail=     → 그 조합이 GuardianLink로 연결돼 있어야 함(아니면 403)
+// GET /api/check-risk?guardianEmail= (seniorUserId 없이) → 400
+export async function GET(request: NextRequest) {
+  const seniorUserId = request.nextUrl.searchParams.get("seniorUserId");
+  const guardianEmail = request.nextUrl.searchParams.get("guardianEmail");
+
+  if (!seniorUserId && guardianEmail) {
+    return NextResponse.json(
+      { error: "guardianEmail은 seniorUserId와 함께 사용해야 합니다." },
+      { status: 400 }
+    );
+  }
+
   const history = await readJSON<RiskRecord[]>("risk-history.json");
-  return NextResponse.json(history);
+
+  if (!seniorUserId) {
+    return NextResponse.json(history);
+  }
+
+  if (guardianEmail) {
+    const link = await findGuardianLink(seniorUserId, guardianEmail);
+    if (!link) {
+      return NextResponse.json(
+        { error: "이 시니어의 위험 이력을 조회할 권한이 없습니다." },
+        { status: 403 }
+      );
+    }
+  }
+
+  return NextResponse.json(history.filter((record) => record.userId === seniorUserId));
 }
