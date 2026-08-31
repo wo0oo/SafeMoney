@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
 import { getUserBaseline } from "@/lib/userBaseline";
+import { listGuardiansForSenior } from "@/lib/guardianLink";
 import { getTodayTransactions } from "@/lib/riskHistory";
 import { judgeRisk, TransactionInput, RiskRecord, RiskJudgement } from "@/lib/riskEngine";
 import { nowKstIso } from "@/lib/time";
@@ -106,7 +107,9 @@ export async function POST(request: NextRequest) {
   // guardianAlert(실제 모델) 또는 riskLevel=High(콜드스타트 더미 판정 fallback)일 때만 발송.
   // 이메일 발송 실패가 check-risk 응답 자체를 막으면 안 되므로 별도로 감싸서 실패를 삼킵니다.
   const shouldAlertGuardian = judgement.guardianAlert ?? riskLevel === "High";
-  if (shouldAlertGuardian && baseline?.guardianEmail) {
+  const guardianLinks = shouldAlertGuardian && body.userId ? await listGuardiansForSenior(body.userId) : [];
+
+  if (guardianLinks.length > 0) {
     let subject = `[SafeMoney] ${riskLevel} 위험 거래 감지`;
     let emailBody = [
       `${amount.toLocaleString("ko-KR")}원 거래에서 ${riskLevel} 등급 위험이 감지됐습니다.`,
@@ -128,10 +131,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    try {
-      await sendGuardianAlertEmail({ to: baseline.guardianEmail, subject, body: emailBody });
-    } catch (error) {
-      console.error("[check-risk] 보호자 알림 메일 발송 실패", error);
+    // 보호자가 여러 명일 수 있어(1 시니어 : N 보호자) 한 번에 여러 명을 to에 넣지 않고
+    // 개별 발송한다 — 보호자끼리 서로의 이메일이 노출되지 않게 하기 위해서다.
+    // 한 명 발송 실패가 다른 보호자에게 가는 발송을 막으면 안 되므로 각자 개별적으로 감싼다.
+    for (const link of guardianLinks) {
+      try {
+        await sendGuardianAlertEmail({ to: link.guardianEmail, subject, body: emailBody });
+      } catch (error) {
+        console.error(`[check-risk] 보호자(${link.guardianEmail}) 알림 메일 발송 실패`, error);
+      }
     }
   }
 
