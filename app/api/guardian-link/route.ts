@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createGuardianLink,
-  deleteGuardianLink,
+  deleteGuardianLinkByPair,
   listGuardiansForSenior,
   listSeniorsForGuardian,
 } from "@/lib/guardianLink";
@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
   if (typeof body.guardianEmail !== "string" || body.guardianEmail.trim() === "") {
     return NextResponse.json({ error: "guardianEmail은 필수입니다." }, { status: 400 });
   }
+  if (!body.guardianEmail.trim().includes("@")) {
+    return NextResponse.json({ error: "guardianEmail 형식이 올바르지 않습니다." }, { status: 400 });
+  }
 
   const link = await createGuardianLink({
     seniorUserId: body.seniorUserId,
@@ -52,17 +55,22 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(link);
 }
 
-// DELETE /api/guardian-link?id=
+// DELETE /api/guardian-link?seniorUserId=&guardianEmail=
+// id 단독이 아니라 조합을 요구한다 — GET으로 id가 노출되므로 id만으로는 삭제할 수 없게 하기 위함.
 export async function DELETE(request: NextRequest) {
-  const id = request.nextUrl.searchParams.get("id");
+  const seniorUserId = request.nextUrl.searchParams.get("seniorUserId");
+  const guardianEmail = request.nextUrl.searchParams.get("guardianEmail");
 
-  if (!id) {
-    return NextResponse.json({ error: "id 쿼리 파라미터가 필요합니다." }, { status: 400 });
+  if (!seniorUserId) {
+    return NextResponse.json({ error: "seniorUserId 쿼리 파라미터가 필요합니다." }, { status: 400 });
+  }
+  if (!guardianEmail) {
+    return NextResponse.json({ error: "guardianEmail 쿼리 파라미터가 필요합니다." }, { status: 400 });
   }
 
-  const deleted = await deleteGuardianLink(id);
+  const deleted = await deleteGuardianLinkByPair(seniorUserId, guardianEmail);
   if (!deleted) {
-    return NextResponse.json({ error: "해당 id의 연결이 없습니다." }, { status: 404 });
+    return NextResponse.json({ error: "해당 조합의 연결이 없습니다." }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true });

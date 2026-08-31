@@ -37,9 +37,12 @@ export async function createGuardianLink(input: {
   guardianName?: string;
   relation?: string;
 }): Promise<GuardianLink | null> {
+  const seniorUserId = input.seniorUserId.trim();
+  const guardianEmail = input.guardianEmail.trim().toLowerCase();
+
   const links = await listAllGuardianLinks();
   const exists = links.some(
-    (l) => l.seniorUserId === input.seniorUserId && l.guardianEmail === input.guardianEmail
+    (l) => l.seniorUserId === seniorUserId && l.guardianEmail === guardianEmail
   );
   if (exists) {
     return null;
@@ -47,8 +50,8 @@ export async function createGuardianLink(input: {
 
   const link: GuardianLink = {
     id: crypto.randomUUID(),
-    seniorUserId: input.seniorUserId,
-    guardianEmail: input.guardianEmail,
+    seniorUserId,
+    guardianEmail,
     guardianName: input.guardianName,
     relation: input.relation,
     createdAt: nowKstIso(),
@@ -61,6 +64,27 @@ export async function createGuardianLink(input: {
 export async function deleteGuardianLink(id: string): Promise<boolean> {
   const links = await listAllGuardianLinks();
   const next = links.filter((l) => l.id !== id);
+  if (next.length === links.length) {
+    return false;
+  }
+  await writeJSON("guardian-links.json", next);
+  return true;
+}
+
+// id 단독 대신 seniorUserId + guardianEmail 조합으로 삭제한다 — id는 GET으로 노출되므로
+// id만 알면 누구나 삭제할 수 있는 것을 막기 위함(그 시니어-보호자 조합을 이미 아는 사람만 삭제 가능).
+// createGuardianLink와 동일한 정규화(trim / guardianEmail toLowerCase)로 비교한다.
+export async function deleteGuardianLinkByPair(
+  seniorUserId: string,
+  guardianEmail: string
+): Promise<boolean> {
+  const normalizedSeniorUserId = seniorUserId.trim();
+  const normalizedGuardianEmail = guardianEmail.trim().toLowerCase();
+
+  const links = await listAllGuardianLinks();
+  const next = links.filter(
+    (l) => !(l.seniorUserId === normalizedSeniorUserId && l.guardianEmail === normalizedGuardianEmail)
+  );
   if (next.length === links.length) {
     return false;
   }

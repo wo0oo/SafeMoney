@@ -107,7 +107,14 @@ export async function POST(request: NextRequest) {
   // guardianAlert(실제 모델) 또는 riskLevel=High(콜드스타트 더미 판정 fallback)일 때만 발송.
   // 이메일 발송 실패가 check-risk 응답 자체를 막으면 안 되므로 별도로 감싸서 실패를 삼킵니다.
   const shouldAlertGuardian = judgement.guardianAlert ?? riskLevel === "High";
-  const guardianLinks = shouldAlertGuardian && body.userId ? await listGuardiansForSenior(body.userId) : [];
+  let guardianLinks: Awaited<ReturnType<typeof listGuardiansForSenior>> = [];
+  if (shouldAlertGuardian && body.userId) {
+    try {
+      guardianLinks = await listGuardiansForSenior(body.userId);
+    } catch (error) {
+      console.error("[check-risk] 보호자 연결 조회 실패 — 알림 발송을 건너뜁니다", error);
+    }
+  }
 
   if (guardianLinks.length > 0) {
     let subject = `[SafeMoney] ${riskLevel} 위험 거래 감지`;
