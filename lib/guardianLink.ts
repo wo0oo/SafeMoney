@@ -10,6 +10,7 @@ export type GuardianLink = {
   guardianEmail: string;
   guardianName?: string;
   relation?: string;
+  alertEnabled?: boolean;
   createdAt: string;
 };
 
@@ -36,6 +37,7 @@ export async function createGuardianLink(input: {
   guardianEmail: string;
   guardianName?: string;
   relation?: string;
+  alertEnabled?: boolean;
 }): Promise<GuardianLink | null> {
   const seniorUserId = input.seniorUserId.trim();
   const guardianEmail = input.guardianEmail.trim().toLowerCase();
@@ -54,6 +56,7 @@ export async function createGuardianLink(input: {
     guardianEmail,
     guardianName: input.guardianName,
     relation: input.relation,
+    alertEnabled: input.alertEnabled ?? true,
     createdAt: nowKstIso(),
   };
   links.push(link);
@@ -90,4 +93,43 @@ export async function deleteGuardianLinkByPair(
   }
   await writeJSON("guardian-links.json", next);
   return true;
+}
+
+// seniorUserId + guardianEmail 조합으로 특정 연결 하나를 찾는다. check-risk GET의 접근
+// 검증과 updateGuardianLinkAlert 양쪽에서 재사용한다. createGuardianLink와 동일한 정규화를 쓴다.
+export async function findGuardianLink(
+  seniorUserId: string,
+  guardianEmail: string
+): Promise<GuardianLink | null> {
+  const normalizedSeniorUserId = seniorUserId.trim();
+  const normalizedGuardianEmail = guardianEmail.trim().toLowerCase();
+
+  const links = await listAllGuardianLinks();
+  return (
+    links.find(
+      (l) => l.seniorUserId === normalizedSeniorUserId && l.guardianEmail === normalizedGuardianEmail
+    ) ?? null
+  );
+}
+
+// 특정 연결의 alertEnabled만 갱신한다. 대상이 없으면 null.
+export async function updateGuardianLinkAlert(
+  seniorUserId: string,
+  guardianEmail: string,
+  alertEnabled: boolean
+): Promise<GuardianLink | null> {
+  const normalizedSeniorUserId = seniorUserId.trim();
+  const normalizedGuardianEmail = guardianEmail.trim().toLowerCase();
+
+  const links = await listAllGuardianLinks();
+  const index = links.findIndex(
+    (l) => l.seniorUserId === normalizedSeniorUserId && l.guardianEmail === normalizedGuardianEmail
+  );
+  if (index === -1) {
+    return null;
+  }
+
+  links[index] = { ...links[index], alertEnabled };
+  await writeJSON("guardian-links.json", links);
+  return links[index];
 }
