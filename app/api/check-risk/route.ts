@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJSON, writeJSON } from "@/lib/db";
 import { getUserBaseline } from "@/lib/userBaseline";
+import { findGuardianLink, listGuardiansForSenior } from "@/lib/guardianLink";
 import { getTodayTransactions } from "@/lib/riskHistory";
 import { judgeRisk, TransactionInput, RiskRecord, RiskJudgement } from "@/lib/riskEngine";
 import { nowKstIso } from "@/lib/time";
@@ -106,7 +107,19 @@ export async function POST(request: NextRequest) {
   // guardianAlert(실제 모델) 또는 riskLevel=High(콜드스타트 더미 판정 fallback)일 때만 발송.
   // 이메일 발송 실패가 check-risk 응답 자체를 막으면 안 되므로 별도로 감싸서 실패를 삼킵니다.
   const shouldAlertGuardian = judgement.guardianAlert ?? riskLevel === "High";
-  if (shouldAlertGuardian && baseline?.guardianEmail) {
+  let guardianLinks: Awaited<ReturnType<typeof listGuardiansForSenior>> = [];
+  if (shouldAlertGuardian && body.userId) {
+    try {
+      guardianLinks = await listGuardiansForSenior(body.userId);
+    } catch (error) {
+      console.error("[check-risk] 보호자 연결 조회 실패 — 알림 발송을 건너뜁니다", error);
+    }
+  }
+
+  // alertEnabled가 명시적으로 false인 보호자는 발송 대상에서 제외한다(미지정/true면 발송).
+  const alertRecipients = guardianLinks.filter((link) => link.alertEnabled !== false);
+
+  if (alertRecipients.length > 0) {
     let subject = `[SafeMoney] ${riskLevel} 위험 거래 감지`;
     let emailBody = [
       `${amount.toLocaleString("ko-KR")}원 거래에서 ${riskLevel} 등급 위험이 감지됐습니다.`,
@@ -128,18 +141,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    try {
-      await sendGuardianAlertEmail({ to: baseline.guardianEmail, subject, body: emailBody });
-    } catch (error) {
-      console.error("[check-risk] 보호자 알림 메일 발송 실패", error);
+    // 보호자가 여러 명일 수 있어(1 시니어 : N 보호자) 한 번에 여러 명을 to에 넣지 않고
+    // 개별 발송한다 — 보호자끼리 서로의 이메일이 노출되지 않게 하기 위해서다.
+    // 한 명 발송 실패가 다른 보호자에게 가는 발송을 막으면 안 되므로 각자 개별적으로 감싼다.
+    for (const link of alertRecipients) {
+      try {
+        await sendGuardianAlertEmail({ to: link.guardianEmail, subject, body: emailBody });
+      } catch (error) {
+        console.error(`[check-risk] 보호자(${link.guardianEmail}) 알림 메일 발송 실패`, error);
+      }
     }
   }
 
   return NextResponse.json(record);
 }
 
-// GET /api/check-risk → 전체 위험 판정 이력 조회
-export async function GET() {
+// GET /api/check-risk                                → 전체 이력 조회(파라미터 없음, 기존 동작 하위호환)
+// GET /api/check-risk?seniorUserId=                   → 그 시니어 이력만 필터링(별도 인증 없음 — 시니어 본인 조회용)
+// GET /api/check-risk?seniorUserId=&guardianEmail=     → 그 조합이 GuardianLink로 연결돼 있어야 함(아니면 403)
+// GET /api/check-risk?guardianEmail= (seniorUserId 없이) → 400
+export async function GET(request: NextRequest) {
+  const seniorUserId = request.nextUrl.searchParams.get("seniorUserId")?.trim() || null;
+  const guardianEmail = request.nextUrl.searchParams.get("guardianEmail")?.trim() || null;
+
+  if (!seniorUserId && guardianEmail) {
+    return NextResponse.json(
+      { error: "guardianEmail은 seniorUserId와 함께 사용해야 합니다." },
+      { status: 400 }
+    );
+  }
+
   const history = await readJSON<RiskRecord[]>("risk-history.json");
-  return NextResponse.json(history);
+
+  // 주의: 아래 무파라미터 분기는 의도적으로 미인증 상태다 — seniorUserId 없이 호출되면
+  // 아래의 guardianEmail(seniorUserId+guardianEmail 조합) 접근 제어를 전혀 거치지 않고
+  // 모든 시니어의 전체 이력을 그대로 반환한다. app/demo/page.tsx(내부 테스트용 데모 페이지)가
+  // 파라미터 없이 이 엔드포인트를 호출하는 기존 동작과의 하위호환을 위해 남겨둔 것으로,
+  // 이 함수 안의 guardianEmail 403 체크가 엔드포인트 전체를 보호한다고 착각하면 안 된다 —
+  // 이 분기는 그 체크와 별개로 완전히 열려 있는 경로다. app/demo/page.tsx(또는 다른 호출부)가
+  // 항상 seniorUserId를 보내도록 수정되면, 이 무파라미터 분기는 제거하거나
+  // (예: 프로덕션 환경에서는 막는 등) 제한해야 한다.
+  if (!seniorUserId) {
+    return NextResponse.json(history);
+  }
+
+  if (guardianEmail) {
+    const link = await findGuardianLink(seniorUserId, guardianEmail);
+    if (!link) {
+      return NextResponse.json(
+        { error: "이 시니어의 위험 이력을 조회할 권한이 없습니다." },
+        { status: 403 }
+      );
+    }
+  }
+
+  return NextResponse.json(history.filter((record) => record.userId === seniorUserId));
 }
