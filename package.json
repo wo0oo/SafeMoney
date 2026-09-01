@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "demo": "tsx model/demo.ts"
+    "demo": "tsx model/demo.ts",
+    "eval:paysim": "tsx model/paysimEval.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
