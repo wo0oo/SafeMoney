@@ -26,8 +26,11 @@ export const RISK_CONFIG = {
   // R6 고위험 상품 가입 (productRiskGrade 기준)
   r6: { mid: 10, high: 30, very_high: 40 } as Record<string, number>,
 
-  // R7 소비 카테고리 이상
-  r7: { multiplier: 5, weight: 10 },
+  // R7 소비 카테고리 이상: r = daySpend / dailySpendAvg. 기존엔 배율과 무관하게 weight가
+  // 고정(10)이라, 결제(payment) 유형에 걸리는 콤보가 하나도 없는 것과 겹쳐서 아무리 이례적인
+  // 결제라도 R3(15)+R7(10)=25로 Medium 문턱(30)을 절대 못 넘었음. R1처럼 배율 구간을 둬서
+  // 5배 이상이면 최소 Medium(R3와 겹칠 때)까지는 가도록 보강.
+  r7: { t1: 5, t2: 10, w1: 15, w2: 25 },
 
   // 조합 규칙
   combo: {

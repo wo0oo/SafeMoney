@@ -97,7 +97,7 @@ export function ruleR6(tx: Transaction): RuleHit | null {
   return { id: "R6", name: "고위험 상품 가입", weight, reason: reasonMap[g] };
 }
 
-/** R7 소비 카테고리 이상: 신규 업종에서 당일 소비 ≥ 5×dailySpendAvg. 베이스라인 없으면(콜드스타트) 절대 임계값 적용 */
+/** R7 소비 카테고리 이상: r = 신규 업종 당일 소비 / dailySpendAvg, 구간별 weight(R1과 동일 패턴). 베이스라인 없으면(콜드스타트) 절대 임계값 적용 */
 export function ruleR7(tx: Transaction, base: UserBaseline | null, recent: Transaction[]): RuleHit | null {
   if (tx.type !== "payment") return null;
   if (!tx.merchantCategory) return null;
@@ -116,9 +116,15 @@ export function ruleR7(tx: Transaction, base: UserBaseline | null, recent: Trans
     return null;
   }
 
-  if (daySpend >= CFG.r7.multiplier * base.dailySpendAvg)
-    return { id: "R7", name: "소비 카테고리 이상", weight: CFG.r7.weight, reason: "평소와 다른 소비 패턴" };
-  return null;
+  if (base.dailySpendAvg <= 0) return null;
+  const r = daySpend / base.dailySpendAvg;
+  const c = CFG.r7;
+  let weight = 0;
+  let reason = "";
+  if (r >= c.t2) { weight = c.w2; reason = "평소 대비 극단적으로 큰 소비"; }
+  else if (r >= c.t1) { weight = c.w1; reason = "평소와 다른 소비 패턴"; }
+  else return null;
+  return { id: "R7", name: "소비 카테고리 이상", weight, reason, meta: { r } };
 }
 
 /** 개별 규칙 전체 평가 */
