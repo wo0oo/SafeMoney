@@ -26,3 +26,21 @@ export type RiskRequest = {
   region?: string;
   productRiskGrade?: ProductRiskGrade;
 };
+
+export type GuardianLink = {
+  id: string;
+  seniorUserId: string;
+  guardianEmail: string;
+  guardianName?: string;
+  relation?: string;
+  alertEnabled?: boolean;
+  createdAt: string;
+};
+
+export type CreateGuardianLinkRequest = {
+  seniorUserId: string;
+  guardianEmail: string;
+  guardianName?: string;
+  relation?: string;
+  alertEnabled?: boolean;
+};
