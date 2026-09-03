@@ -1,60 +1,6 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { getGuardiansForSenior, updateGuardianAlert } from "@/lib/client-api";
-import { getCurrentSeniorUserId } from "@/lib/client-session";
-
-export function NotificationToggle({
-  seniorUserId: requestedSeniorUserId,
-  guardianEmail: requestedGuardianEmail,
-  initial = true,
-}: {
-  seniorUserId?: string;
-  guardianEmail?: string;
-  initial?: boolean;
-}) {
+import { useState } from "react";
+export function NotificationToggle({ initial = true }: { initial?: boolean }) {
   const [on, setOn] = useState(initial);
-  const [target, setTarget] = useState<{ seniorUserId: string; guardianEmail: string } | null>(
-    requestedSeniorUserId && requestedGuardianEmail
-      ? { seniorUserId: requestedSeniorUserId, guardianEmail: requestedGuardianEmail }
-      : null,
-  );
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (requestedSeniorUserId && requestedGuardianEmail) return;
-    const seniorUserId = requestedSeniorUserId || getCurrentSeniorUserId();
-    getGuardiansForSenior(seniorUserId)
-      .then(([link]) => {
-        if (!link) return;
-        setTarget({ seniorUserId: link.seniorUserId, guardianEmail: link.guardianEmail });
-        setOn(link.alertEnabled !== false);
-      })
-      .catch(() => setTarget(null));
-  }, [requestedGuardianEmail, requestedSeniorUserId]);
-
-  async function toggle() {
-    if (!target || busy) return;
-    setBusy(true);
-    try {
-      const updated = await updateGuardianAlert({ ...target, alertEnabled: !on });
-      setOn(updated.alertEnabled !== false);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label="고위험 거래 알림"
-      disabled={!target || busy}
-      onClick={toggle}
-      className={`relative h-[40px] w-[82px] rounded-[20px] border-0 disabled:cursor-not-allowed disabled:opacity-50 ${on ? "bg-[#262626]" : "bg-[#d9d9d9]"}`}
-    >
-      <span className={`absolute top-[5px] h-[30px] w-[30px] rounded-full bg-white ${on ? "left-[44px]" : "left-[8px]"}`} />
-    </button>
-  );
+  return <button type="button" role="switch" aria-checked={on} aria-label="고위험 거래 알림" onClick={() => setOn(!on)} className={`relative h-[40px] w-[82px] rounded-[20px] border-0 ${on ? "bg-[#262626]" : "bg-[#d9d9d9]"}`}><span className={`absolute top-[5px] h-[30px] w-[30px] rounded-full bg-white ${on ? "left-[44px]" : "left-[8px]"}`} /></button>;
 }
