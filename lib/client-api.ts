@@ -1,9 +1,16 @@
-import type { RiskRecord, RiskRequest } from "@/lib/client-types";
+import type {
+  CreateGuardianLinkRequest,
+  GuardianLink,
+  RiskRecord,
+  RiskRequest,
+} from "@/lib/client-types";
 
 async function readResponse<T>(response: Response): Promise<T> {
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? "요청에 실패했습니다.");
-  return body as T;
+  const text = await response.text();
+  const body = text ? JSON.parse(text) as T & { error?: string } : null;
+  if (!response.ok) throw new Error(body?.error ?? `요청에 실패했습니다. (${response.status})`);
+  if (body === null) throw new Error("서버가 빈 응답을 반환했습니다.");
+  return body;
 }
 
 export async function checkRisk(input: RiskRequest): Promise<RiskRecord> {
@@ -14,6 +21,57 @@ export async function checkRisk(input: RiskRequest): Promise<RiskRecord> {
   }));
 }
 
-export async function getRiskHistory(): Promise<RiskRecord[]> {
-  return readResponse<RiskRecord[]>(await fetch("/api/check-risk", { cache: "no-store" }));
+export async function getRiskHistory(params?: {
+  seniorUserId?: string;
+  guardianEmail?: string;
+}): Promise<RiskRecord[]> {
+  const search = new URLSearchParams();
+  if (params?.seniorUserId) search.set("seniorUserId", params.seniorUserId);
+  if (params?.guardianEmail) search.set("guardianEmail", params.guardianEmail);
+  const query = search.toString();
+  return readResponse<RiskRecord[]>(await fetch(
+    query ? `/api/check-risk?${query}` : "/api/check-risk",
+    { cache: "no-store" },
+  ));
+}
+
+export async function createGuardianLink(input: CreateGuardianLinkRequest): Promise<GuardianLink> {
+  return readResponse<GuardianLink>(await fetch("/api/guardian-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }));
+}
+
+export async function getGuardiansForSenior(seniorUserId: string): Promise<GuardianLink[]> {
+  return readResponse<GuardianLink[]>(await fetch(
+    `/api/guardian-link?seniorUserId=${encodeURIComponent(seniorUserId)}`,
+    { cache: "no-store" },
+  ));
+}
+
+export async function getSeniorsForGuardian(guardianEmail: string): Promise<GuardianLink[]> {
+  return readResponse<GuardianLink[]>(await fetch(
+    `/api/guardian-link?guardianEmail=${encodeURIComponent(guardianEmail)}`,
+    { cache: "no-store" },
+  ));
+}
+
+export async function updateGuardianAlert(input: {
+  seniorUserId: string;
+  guardianEmail: string;
+  alertEnabled: boolean;
+}): Promise<GuardianLink> {
+  return readResponse<GuardianLink>(await fetch("/api/guardian-link", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }));
+}
+
+export async function removeGuardianLink(seniorUserId: string, guardianEmail: string) {
+  const query = new URLSearchParams({ seniorUserId, guardianEmail });
+  return readResponse<{ ok: true }>(await fetch(`/api/guardian-link?${query}`, {
+    method: "DELETE",
+  }));
 }
