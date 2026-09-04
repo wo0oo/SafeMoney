@@ -62,6 +62,10 @@ curl -X POST http://localhost:3000/api/check-risk \
   -d '{"amount": 3500000}'
 ```
 
+### `POST /api/auth/signup` / `POST /api/auth/login` / `POST /api/auth/logout` / `GET /api/auth/me`
+
+계정(시니어/보호자) 회원가입·로그인·로그아웃과 현재 로그인 사용자 조회. `signup`/`login` 성공 시 httpOnly 쿠키(`safemoney_session`, 30일)로 세션을 내려줍니다. 시니어 계정의 `username`이 곧 `RiskRecord.userId`/`GuardianLink.seniorUserId`, 보호자 계정의 `email`이 곧 `GuardianLink.guardianEmail`로 쓰입니다(둘 다 다른 라우트가 참조하는 실질 식별자이므로 임의로 바꾸면 안 됩니다). 요청/응답 형태와 검증 규칙은 `app/api/auth/*/route.ts` 참고.
+
 ## 새 API 만드는 법
 
 1. `app/api/<이름>/route.ts` 파일 생성
@@ -108,6 +112,12 @@ Vercel 배포 연결 완료 (https://safemoney-gamma.vercel.app, 프로젝트 `w
 > 참고: `data/*.json` 기반 JSON DB는 Vercel 배포 환경에서 쓰기가 안 됩니다 (`data/risk-history.json`이 `.gitignore` 대상이라 배포 번들에 없고, 서버리스 함수는 파일시스템이 읽기 전용이라 `writeJSON`이 동작 안 함). 그 결과 배포 환경에서 `POST /api/check-risk`는 500 에러를 냅니다. `GET /api/ping`처럼 파일 I/O 없는 라우트는 정상 동작하며, 로컬 개발(`npm run dev`)은 영향 없습니다. 실제 저장이 필요해지는 4주차(이메일 발송 연동, 보호자 대시보드)에 실 DB(Vercel Blob/KV/Postgres 등)로 교체할지 결정 예정.
 >
 > `guardian-links.json`도 다른 Blob 기반 JSON 리소스와 마찬가지로, 해당 환경(로컬/Preview/Production)의 Blob 스토어에 한 번도 쓰기가 일어나지 않으면 파일이 존재하지 않습니다. 새 환경에서는 `POST /api/guardian-link`를 한 번 호출해 초기화하기 전까지 `GET`/`DELETE /api/guardian-link`가 실패합니다.
+>
+> `users.json`/`sessions.json`(로그인/회원가입용)은 `guardian-links.json`과 달리 별도 초기화가 필요 없습니다 — 그 환경에서 첫 `POST /api/auth/signup`이 성공하는 순간 자동으로 생성됩니다.
+>
+> **계정은 환경(Blob 스토어)마다 완전히 분리됩니다.** Preview에서 가입한 계정으로 Production에 로그인할 수 없고, 반대도 마찬가지입니다. 배포/데모 전에 그 환경에서 새로 회원가입을 해야 합니다.
+>
+> **로그인 붙기 전에 테스트용으로 쌓아둔 위험 이력/보호자 연결(시니어 `u_01`, 보호자 `ij5943@naver.com` 등)은 이제 로그인 없이는 화면에서 안 보입니다.** 그 전까지는 `lib/client-identity.ts`가 이 값을 하드코딩해서 항상 보여줬는데, 그 파일은 이번에 삭제됐습니다. 각 환경의 Blob 스토어에 남아있는 데이터 자체는 그대로지만, 화면에서 다시 보려면 시니어는 `username`을 정확히 `u_01`로, 보호자는 `email`을 정확히 `ij5943@naver.com`으로 실제 회원가입해야 연결됩니다.
 
 ## 참고
 
