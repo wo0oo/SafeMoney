@@ -35,7 +35,12 @@ export async function createSession(userId: string): Promise<Session> {
 
 export async function findSession(token: string): Promise<Session | null> {
   const sessions = await listAllSessions();
-  return sessions.find((s) => s.token === token) ?? null;
+  const session = sessions.find((s) => s.token === token) ?? null;
+  if (!session) return null;
+  if (Date.now() - Date.parse(session.createdAt) > SESSION_MAX_AGE_SECONDS * 1000) {
+    return null;
+  }
+  return session;
 }
 
 export async function deleteSession(token: string): Promise<void> {
