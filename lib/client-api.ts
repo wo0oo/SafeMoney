@@ -1,8 +1,11 @@
-import type {
+﻿import type {
+  AuthUser,
   CreateGuardianLinkRequest,
   GuardianLink,
+  LoginRequest,
   RiskRecord,
   RiskRequest,
+  SignupRequest,
 } from "@/lib/client-types";
 
 async function readResponse<T>(response: Response): Promise<T> {
@@ -74,4 +77,28 @@ export async function removeGuardianLink(seniorUserId: string, guardianEmail: st
   return readResponse<{ ok: true }>(await fetch(`/api/guardian-link?${query}`, {
     method: "DELETE",
   }));
+}
+
+export async function signup(input: SignupRequest): Promise<AuthUser> {
+  return readResponse<AuthUser>(await fetch("/api/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }));
+}
+
+export async function login(input: LoginRequest): Promise<AuthUser> {
+  return readResponse<AuthUser>(await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  }));
+}
+
+export async function logout(): Promise<void> {
+  await readResponse<{ ok: true }>(await fetch("/api/auth/logout", { method: "POST" }));
+}
+
+export async function getMe(): Promise<AuthUser> {
+  return readResponse<AuthUser>(await fetch("/api/auth/me", { cache: "no-store" }));
 }

@@ -43,3 +43,27 @@ export type CreateGuardianLinkRequest = {
   guardianName?: string;
   relation?: string;
 };
+
+export type UserRole = "senior" | "guardian";
+
+export type AuthUser = {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: UserRole;
+};
+
+export type SignupRequest = {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  role: UserRole;
+};
+
+export type LoginRequest = {
+  username: string;
+  password: string;
+  role: UserRole;
+};
