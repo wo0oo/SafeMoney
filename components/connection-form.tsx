@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PrimaryButton } from "@/components/ui";
 import { createGuardianLink } from "@/lib/client-api";
-import { CURRENT_GUARDIAN_EMAIL, CURRENT_SENIOR_USER_ID } from "@/lib/client-identity";
+import { useSession } from "@/lib/session-context";
 
 export function ConnectionForm({ kind }: { kind: "guardian" | "protected" }) {
+  const me = useSession();
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [relation, setRelation] = useState("");
@@ -22,8 +23,8 @@ export function ConnectionForm({ kind }: { kind: "guardian" | "protected" }) {
     setError("");
     try {
       await createGuardianLink({
-        seniorUserId: guardian ? CURRENT_SENIOR_USER_ID : value,
-        guardianEmail: guardian ? value.toLowerCase() : CURRENT_GUARDIAN_EMAIL,
+        seniorUserId: guardian ? me.username : value,
+        guardianEmail: guardian ? value.toLowerCase() : me.email,
         guardianName: guardian ? value.split("@")[0] : undefined,
         relation: guardian ? relation || "가족" : undefined,
       });

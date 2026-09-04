@@ -5,17 +5,18 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { NotificationToggle } from "@/components/notification-toggle";
 import { getGuardiansForSenior } from "@/lib/client-api";
-import { CURRENT_SENIOR_USER_ID } from "@/lib/client-identity";
+import { useSession } from "@/lib/session-context";
 import type { GuardianLink } from "@/lib/client-types";
 
 export default function GuardianSettings() {
+  const me = useSession();
   const [guardian, setGuardian] = useState<GuardianLink | null>(null);
 
   useEffect(() => {
-    getGuardiansForSenior(CURRENT_SENIOR_USER_ID)
+    getGuardiansForSenior(me.username)
       .then(([first]) => setGuardian(first ?? null))
       .catch(() => setGuardian(null));
-  }, []);
+  }, [me.username]);
 
   return <AppShell title="보호자 설정" active="guardian">
     <p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">고위험 거래가 감지되면 등록된 보호자에게 알림을 보냅니다</p>

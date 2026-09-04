@@ -5,17 +5,18 @@ import { useEffect, useState } from "react";
 import { GuardianShell } from "@/components/guardian-shell";
 import { Surface } from "@/components/ui";
 import { getSeniorsForGuardian } from "@/lib/client-api";
-import { CURRENT_GUARDIAN_EMAIL } from "@/lib/client-identity";
+import { useSession } from "@/lib/session-context";
 import type { GuardianLink } from "@/lib/client-types";
 
 export default function FamilyPage() {
+  const me = useSession();
   const [person, setPerson] = useState<GuardianLink | null>(null);
 
   useEffect(() => {
-    getSeniorsForGuardian(CURRENT_GUARDIAN_EMAIL)
+    getSeniorsForGuardian(me.email)
       .then(([first]) => setPerson(first ?? null))
       .catch(() => setPerson(null));
-  }, []);
+  }, [me.email]);
 
   return <GuardianShell title="연결된 가족" active="family" bell>
     <p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">연결된 가족의 금융 안전 상태를 확인합니다.</p>

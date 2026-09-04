@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { RiskBadge } from "@/components/ui";
 import { getRiskHistory } from "@/lib/client-api";
+import { useSession } from "@/lib/session-context";
 import type { RiskRecord, RiskLevel } from "@/lib/client-types";
 
 type Filter = "all" | RiskLevel;
 export function HistoryList() {
+  const me = useSession();
   const [items, setItems] = useState<RiskRecord[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState("");
-  useEffect(() => { getRiskHistory().then(v => setItems(v.slice().reverse())).catch(e => setError(e instanceof Error ? e.message : "내역을 불러오지 못했습니다.")); }, []);
+  useEffect(() => { getRiskHistory({ seniorUserId: me.username }).then(v => setItems(v.slice().reverse())).catch(e => setError(e instanceof Error ? e.message : "내역을 불러오지 못했습니다.")); }, [me.username]);
   const visible = useMemo(() => items.filter(x => filter === "all" || x.riskLevel === filter).slice(0, 5), [items, filter]);
   return <>
     <p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">총 {items.length}건의 거래 위험 확인 내역이 있습니다.</p>

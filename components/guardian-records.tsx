@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { RiskBadge } from "@/components/ui";
 import { typeLabel } from "@/components/history-list";
-import { getRiskHistory } from "@/lib/client-api";
-import { CURRENT_GUARDIAN_EMAIL, CURRENT_SENIOR_USER_ID } from "@/lib/client-identity";
+import { getRiskHistory, getSeniorsForGuardian } from "@/lib/client-api";
+import { useSession } from "@/lib/session-context";
 import type { RiskRecord } from "@/lib/client-types";
 
 function formatAlertDate(timestamp: string) {
@@ -21,14 +21,16 @@ function formatAlertDate(timestamp: string) {
 }
 
 export function GuardianRecords({ mode }: { mode: "activities" | "notifications" }) {
+  const me = useSession();
   const [items, setItems] = useState<RiskRecord[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getRiskHistory({
-      seniorUserId: CURRENT_SENIOR_USER_ID,
-      guardianEmail: CURRENT_GUARDIAN_EMAIL,
-    })
+    getSeniorsForGuardian(me.email)
+      .then(([senior]) => {
+        if (!senior) return Promise.resolve<RiskRecord[]>([]);
+        return getRiskHistory({ seniorUserId: senior.seniorUserId, guardianEmail: me.email });
+      })
       .then((history) => {
         const visible = mode === "notifications"
           ? history.filter((record) => record.riskLevel === "High")
@@ -39,7 +41,7 @@ export function GuardianRecords({ mode }: { mode: "activities" | "notifications"
         setItems([]);
         setError(caught instanceof Error ? caught.message : "내역을 불러오지 못했습니다.");
       });
-  }, [mode]);
+  }, [mode, me.email]);
 
   return (
     <div className={`absolute left-[68px] ${mode === "notifications" ? "top-[172px]" : "top-[100px]"} space-y-[20px]`}>
@@ -47,7 +49,7 @@ export function GuardianRecords({ mode }: { mode: "activities" | "notifications"
         <Link href={`/elder/history/${record.id}`} key={record.id} className={`flex w-[1010px] items-center rounded-[8px] border border-[#d9d9d9] bg-white px-[32px] no-underline ${mode === "notifications" ? "h-[136px]" : "h-[104px]"}`}>
           <span className="mr-[28px] text-[29px] text-[#d11a1a]">⚠️</span>
           {mode === "notifications" ? <div>
-            <strong className="block text-[20px] font-semibold text-[#141414]">{record.userId ?? CURRENT_SENIOR_USER_ID}님의 고위험 거래가 감지되었습니다</strong>
+            <strong className="block text-[20px] font-semibold text-[#141414]">{record.userId ?? "피보호자"}님의 고위험 거래가 감지되었습니다</strong>
             <span className="mt-[8px] block text-[20px] text-[#d92e21]">{record.amount.toLocaleString("ko-KR")}원 · High</span>
           </div> : <div>
             <strong className="block text-[20px]">{record.amount.toLocaleString("ko-KR")}원</strong>
