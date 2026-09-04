@@ -46,7 +46,7 @@ export function GuardianRecords({ mode }: { mode: "activities" | "notifications"
   return (
     <div className={`absolute left-[68px] ${mode === "notifications" ? "top-[172px]" : "top-[100px]"} space-y-[20px]`}>
       {items.map((record) => (
-        <Link href={`/elder/history/${record.id}`} key={record.id} className={`flex w-[1010px] items-center rounded-[8px] border border-[#d9d9d9] bg-white px-[32px] no-underline ${mode === "notifications" ? "h-[136px]" : "h-[104px]"}`}>
+        <Link href={`/guardian/history/${record.id}`} key={record.id} className={`flex w-[1010px] items-center rounded-[8px] border border-[#d9d9d9] bg-white px-[32px] no-underline ${mode === "notifications" ? "h-[136px]" : "h-[104px]"}`}>
           <span className="mr-[28px] text-[29px] text-[#d11a1a]">⚠️</span>
           {mode === "notifications" ? <div>
             <strong className="block text-[20px] font-semibold text-[#141414]">{record.userId ?? "피보호자"}님의 고위험 거래가 감지되었습니다</strong>
