@@ -68,18 +68,23 @@ export function ruleR4(tx: Transaction, recent: Transaction[]): RuleHit | null {
   return null;
 }
 
-/** R5 고액 현금 인출: 출금 ≥ 5×avgWithdrawal AND ≥ 100만원. 베이스라인 없으면(콜드스타트) 절대 임계값만 적용 */
+/** R5 고액 현금 인출: r = amount / avgWithdrawal, 구간별 weight(R1/R7과 동일 패턴). 베이스라인 없으면(콜드스타트) 절대 임계값만 적용 */
 export function ruleR5(tx: Transaction, base: UserBaseline | null): RuleHit | null {
   if (tx.type !== "withdrawal") return null;
   const c = CFG.r5;
   if (!base) {
     if (tx.amount >= c.absoluteMin)
-      return { id: "R5", name: "고액 현금 인출", weight: c.weight, reason: "베이스라인 없는 신규 사용자의 고액 현금 인출" };
+      return { id: "R5", name: "고액 현금 인출", weight: c.w1, reason: "베이스라인 없는 신규 사용자의 고액 현금 인출" };
     return null;
   }
-  if (tx.amount >= c.multiplier * base.avgWithdrawal && tx.amount >= c.absoluteMin)
-    return { id: "R5", name: "고액 현금 인출", weight: c.weight, reason: "평소보다 큰 현금 인출 (전달책 패턴)" };
-  return null;
+  if (base.avgWithdrawal <= 0 || tx.amount < c.absoluteMin) return null;
+  const r = tx.amount / base.avgWithdrawal;
+  let weight = 0;
+  let reason = "";
+  if (r >= c.t2) { weight = c.w2; reason = "평소 대비 극단적으로 큰 현금 인출 (전달책 패턴 의심)"; }
+  else if (r >= c.t1) { weight = c.w1; reason = "평소보다 큰 현금 인출 (전달책 패턴)"; }
+  else return null;
+  return { id: "R5", name: "고액 현금 인출", weight, reason, meta: { r } };
 }
 
 /** R6 고위험 상품 가입: productRiskGrade 기준 */
@@ -187,6 +192,30 @@ function comboC3(hits: RuleHit[]): ComboHit | null {
   return null;
 }
 
+/**
+ * C4: R3(비활동시간) & R7(t2, 배율≥10 극단적 신규업종 소비) → 등급은 그대로 두고 guardianAlert만.
+ * R1~R7이 전부 베이스라인 통계 이탈로만 판단하는 일관성을 지키기 위해 카테고리 블랙리스트 대신
+ * 기존 개별 규칙(R3+R7 t2)의 조합으로 판단한다.
+ */
+function comboC4(hits: RuleHit[]): ComboHit | null {
+  const r3 = hits.find((h) => h.id === "R3");
+  const r7 = hits.find((h) => h.id === "R7");
+  if (!r3 || !r7) return null;
+  if (((r7.meta?.r as number) ?? 0) < CFG.r7.t2) return null;
+  return { id: "C4", bonus: CFG.combo.c4.bonus, guardianAlert: true, reason: "비활동시간대 극단적 소비 이상 (신규 업종 조합)" };
+}
+
+/**
+ * C5: R5(t2, 배율≥10 고액 현금인출) → 등급은 그대로 두고 guardianAlert만.
+ * R5 t2 자체 weight(35)로 이미 Medium 문턱을 넘으므로 forceGrade는 불필요.
+ */
+function comboC5(hits: RuleHit[]): ComboHit | null {
+  const r5 = hits.find((h) => h.id === "R5");
+  if (!r5) return null;
+  if (((r5.meta?.r as number) ?? 0) < CFG.r5.t2) return null;
+  return { id: "C5", bonus: CFG.combo.c5.bonus, guardianAlert: true, reason: "평소 대비 극단적 고액 현금 인출 (전달책 패턴 의심, 보호자 확인 필요)" };
+}
+
 /** 조합 규칙 전체 평가 */
 export function evaluateCombos(
   hits: RuleHit[],
@@ -194,9 +223,13 @@ export function evaluateCombos(
   base: UserBaseline | null,
   recent: Transaction[]
 ): ComboHit[] {
-  return [comboC1(hits, tx), comboC2(hits, tx, base, recent), comboC3(hits)].filter(
-    (c): c is ComboHit => c !== null
-  );
+  return [
+    comboC1(hits, tx),
+    comboC2(hits, tx, base, recent),
+    comboC3(hits),
+    comboC4(hits),
+    comboC5(hits),
+  ].filter((c): c is ComboHit => c !== null);
 }
 
 // ---------- 유틸 ----------

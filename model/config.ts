@@ -20,8 +20,11 @@ export const RISK_CONFIG = {
     long: { windowMin: 30, count: 5, weight: 30 },
   },
 
-  // R5 고액 현금 인출
-  r5: { multiplier: 5, absoluteMin: 1_000_000, weight: 25 },
+  // R5 고액 현금 인출: r = amount / avgWithdrawal. 기존엔 배율과 무관하게 weight가 고정(25)이라
+  // 단독으론 Medium 문턱(30)을 절대 못 넘었음(전달책 패턴이 R5 단독으로만 잡히는 케이스에서 계속
+  // Low에 머묾). R1/R7처럼 배율 구간을 둬서 5~10배는 오탐 방지 위해 기존과 동일하게 Low 유지,
+  // 10배 이상은 Medium까지 올라가도록 보강 (C5와 함께 사용).
+  r5: { t1: 5, t2: 10, absoluteMin: 1_000_000, w1: 25, w2: 35 },
 
   // R6 고위험 상품 가입 (productRiskGrade 기준)
   r6: { mid: 10, high: 30, very_high: 40 } as Record<string, number>,
@@ -37,6 +40,8 @@ export const RISK_CONFIG = {
     c1: { rThreshold: 10, bonus: 25 },
     c2: { bonus: 0 }, // 즉시 High
     c3: { bonus: 0 }, // 즉시 High
+    c4: { bonus: 0 }, // 등급 유지, guardianAlert만
+    c5: { bonus: 0 }, // 등급 유지(R5 자체 weight로 이미 Medium 도달), guardianAlert만
   },
 
   // 점수 → 등급 매핑 경계 (규칙 문서 §4)
