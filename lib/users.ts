@@ -59,6 +59,9 @@ export async function createUser(input: {
   if (users.some((u) => u.username === username)) {
     return null;
   }
+  if (input.role === "guardian" && users.some((u) => u.email === input.email.trim().toLowerCase())) {
+    return null;
+  }
 
   const user: User = {
     id: crypto.randomUUID(),
