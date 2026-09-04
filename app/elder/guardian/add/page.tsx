@@ -1,0 +1,1 @@
+import { AppShell } from "@/components/app-shell";import { ConnectionForm } from "@/components/connection-form";export default function Page(){return <AppShell title="보호자 설정" active="guardian"><p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">새로운 보호자를 등록합니다</p><ConnectionForm kind="guardian"/></AppShell>}
