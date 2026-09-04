@@ -16,7 +16,8 @@ export default function GuardianHome() {
 
   useEffect(() => {
     getSeniorsForGuardian(me.email)
-      .then(([senior]) => setSeniorUserId(senior?.seniorUserId ?? null));
+      .then(([senior]) => setSeniorUserId(senior?.seniorUserId ?? null))
+      .catch(() => setSeniorUserId(null));
   }, [me.email]);
 
   useEffect(() => {
