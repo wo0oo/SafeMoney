@@ -11,7 +11,14 @@ export type Session = {
 };
 
 export async function listAllSessions(): Promise<Session[]> {
-  return readJSON<Session[]>("sessions.json");
+  try {
+    return await readJSON<Session[]>("sessions.json");
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Blob store에 sessions.json이 없습니다")) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function createSession(userId: string): Promise<Session> {

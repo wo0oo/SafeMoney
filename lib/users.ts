@@ -25,7 +25,14 @@ export function toPublicUser(user: User): PublicUser {
 }
 
 export async function listAllUsers(): Promise<User[]> {
-  return readJSON<User[]>("users.json");
+  try {
+    return await readJSON<User[]>("users.json");
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Blob store에 users.json이 없습니다")) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function findUserByUsername(username: string): Promise<User | null> {
