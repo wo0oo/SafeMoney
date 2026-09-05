@@ -60,6 +60,21 @@ export async function getSeniorsForGuardian(guardianEmail: string): Promise<Guar
   ));
 }
 
+export async function getPendingGuardianRequests(seniorUserId: string): Promise<GuardianLink[]> {
+  return readResponse<GuardianLink[]>(await fetch(
+    `/api/guardian-link?seniorUserId=${encodeURIComponent(seniorUserId)}&status=pending`,
+    { cache: "no-store" },
+  ));
+}
+
+export async function approveGuardianLink(seniorUserId: string, guardianEmail: string): Promise<GuardianLink> {
+  return readResponse<GuardianLink>(await fetch("/api/guardian-link", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ seniorUserId, guardianEmail, approve: true }),
+  }));
+}
+
 export async function updateGuardianAlert(input: {
   seniorUserId: string;
   guardianEmail: string;

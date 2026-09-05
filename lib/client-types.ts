@@ -34,6 +34,7 @@ export type GuardianLink = {
   guardianName?: string;
   relation?: string;
   alertEnabled?: boolean;
+  status?: "pending" | "approved";
   createdAt: string;
 };
 
@@ -42,6 +43,7 @@ export type CreateGuardianLinkRequest = {
   guardianEmail: string;
   guardianName?: string;
   relation?: string;
+  initiatedBy: "senior" | "guardian";
 };
 
 export type UserRole = "senior" | "guardian";
