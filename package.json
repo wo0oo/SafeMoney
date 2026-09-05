@@ -6,12 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "demo": "tsx model/demo.ts",
+    "eval:paysim": "tsx model/paysimEval.ts",
+    "eval:c4c5": "tsx model/edgeCasesC4C5.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.17.1",
+    "@vercel/blob": "^2.8.0",
+    "bcryptjs": "^3.0.3",
     "next": "16.2.12",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "resend": "^6.22.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
+    "tsx": "^4",
     "typescript": "^5"
   }
 }
