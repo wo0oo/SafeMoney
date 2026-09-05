@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "demo": "tsx model/demo.ts"
+    "demo": "tsx model/demo.ts",
+    "eval:paysim": "tsx model/paysimEval.ts",
+    "eval:c4c5": "tsx model/edgeCasesC4C5.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
