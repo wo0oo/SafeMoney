@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getGuardiansForSenior, updateGuardianAlert } from "@/lib/client-api";
-import { CURRENT_SENIOR_USER_ID } from "@/lib/client-identity";
+import { useSession } from "@/lib/session-context";
 
 type Target = { seniorUserId: string; guardianEmail: string };
 
 export function NotificationToggle({
-  seniorUserId = CURRENT_SENIOR_USER_ID,
+  seniorUserId,
   guardianEmail,
   initial = true,
 }: {
@@ -15,22 +15,24 @@ export function NotificationToggle({
   guardianEmail?: string;
   initial?: boolean;
 }) {
+  const me = useSession();
+  const resolvedSeniorUserId = seniorUserId ?? me.username;
   const [on, setOn] = useState(initial);
   const [target, setTarget] = useState<Target | null>(
-    guardianEmail ? { seniorUserId, guardianEmail } : null,
+    guardianEmail ? { seniorUserId: resolvedSeniorUserId, guardianEmail } : null,
   );
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (guardianEmail) return;
-    getGuardiansForSenior(seniorUserId)
+    getGuardiansForSenior(resolvedSeniorUserId)
       .then(([link]) => {
         if (!link) return;
         setTarget({ seniorUserId: link.seniorUserId, guardianEmail: link.guardianEmail });
         setOn(link.alertEnabled !== false);
       })
       .catch(() => setTarget(null));
-  }, [guardianEmail, seniorUserId]);
+  }, [guardianEmail, resolvedSeniorUserId]);
 
   async function toggle() {
     if (!target || busy) return;

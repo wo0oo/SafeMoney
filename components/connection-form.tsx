@@ -4,14 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PrimaryButton } from "@/components/ui";
 import { createGuardianLink } from "@/lib/client-api";
-import { CURRENT_GUARDIAN_EMAIL, CURRENT_SENIOR_USER_ID } from "@/lib/client-identity";
+import { useSession } from "@/lib/session-context";
 
 export function ConnectionForm({ kind }: { kind: "guardian" | "protected" }) {
+  const me = useSession();
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [relation, setRelation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [requested, setRequested] = useState(false);
   const guardian = kind === "guardian";
 
   async function save() {
@@ -22,18 +24,32 @@ export function ConnectionForm({ kind }: { kind: "guardian" | "protected" }) {
     setError("");
     try {
       await createGuardianLink({
-        seniorUserId: guardian ? CURRENT_SENIOR_USER_ID : value,
-        guardianEmail: guardian ? value.toLowerCase() : CURRENT_GUARDIAN_EMAIL,
+        seniorUserId: guardian ? me.username : value,
+        guardianEmail: guardian ? value.toLowerCase() : me.email,
         guardianName: guardian ? value.split("@")[0] : undefined,
         relation: guardian ? relation || "가족" : undefined,
+        initiatedBy: guardian ? "senior" : "guardian",
       });
-      router.push(guardian ? "/elder/guardian" : "/guardian/family");
-      router.refresh();
+      if (guardian) {
+        router.push("/elder/guardian");
+        router.refresh();
+      } else {
+        setRequested(true);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "계정을 연결하지 못했습니다.");
     } finally {
       setBusy(false);
     }
+  }
+
+  if (requested) {
+    return (
+      <section className="absolute left-[48px] top-[90px] flex h-[459px] w-[1010px] flex-col items-center justify-center rounded-[8px] border border-[#d9d9d9] bg-white px-[38px] py-[36px] text-center">
+        <h2 className="m-0 text-[28px] font-semibold">요청을 보냈습니다</h2>
+        <p className="mt-[16px] text-[20px] text-[#6b6b6b]">시니어가 승인하면 연결이 완료됩니다. 승인 전까지는 거래 내역을 볼 수 없어요.</p>
+      </section>
+    );
   }
 
   return (
@@ -58,6 +74,7 @@ export function ConnectionForm({ kind }: { kind: "guardian" | "protected" }) {
           </select>
         </label>
       )}
+      {!guardian && <p className="mt-[16px] text-[16px] text-[#6b6b6b]">연결하면 시니어에게 승인 요청이 전달됩니다. 시니어가 승인해야 거래 내역을 볼 수 있어요.</p>}
       {error && <p className="mt-[16px] text-[16px] text-[#d11a1a]">{error}</p>}
       <PrimaryButton onClick={save} disabled={busy} className="absolute bottom-[22px] right-[24px] h-[58px] w-[218px] text-white">
         {busy ? "연결 중" : guardian ? "보호자 추가" : "피보호자 연결"}

@@ -1,0 +1,56 @@
+"use client";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { GuardianShell } from "@/components/guardian-shell";
+import { getRiskHistory, getSeniorsForGuardian } from "@/lib/client-api";
+import { useSession } from "@/lib/session-context";
+import type { RiskRecord } from "@/lib/client-types";
+import { typeLabel } from "@/components/history-list";
+
+export default function GuardianDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const me = useSession();
+  const [item, setItem] = useState<RiskRecord | null>();
+
+  useEffect(() => {
+    getSeniorsForGuardian(me.email)
+      .then(([senior]) => {
+        if (!senior) return Promise.resolve<RiskRecord[]>([]);
+        return getRiskHistory({ seniorUserId: senior.seniorUserId, guardianEmail: me.email });
+      })
+      .then((history) => setItem(history.find((x) => x.id === id) ?? null))
+      .catch(() => setItem(null));
+  }, [id, me.email]);
+
+  return <GuardianShell title="거래 세부 내역" active="activities">
+    <Link href="/guardian/activities" className="absolute left-[68px] top-[16px] text-[20px] no-underline">‹ 위험 활동으로 돌아가기</Link>
+    {item === undefined ? <p className="absolute left-[68px] top-[70px] text-[20px]">불러오는 중...</p> :
+      item === null ? <p className="absolute left-[68px] top-[70px] text-[20px]">거래 내역을 찾을 수 없습니다.</p> :
+      <>
+        <section className="absolute left-[68px] top-[70px] flex h-[128px] w-[1048px] items-center rounded-[10px] border border-[#d9d9d9] bg-white px-[32px]">
+          <span className="text-[35px]">⚠️</span>
+          <div className="ml-[29px]"><span className="block text-[20px] text-[#6b6b6b]">위험도</span><strong className="text-[28px] text-[#d11a1a]">{item.riskLevel}</strong></div>
+          <p className="ml-[112px] w-[650px] text-[20px]">{item.reason}</p>
+        </section>
+        <h2 className="absolute left-[68px] top-[236px] m-0 text-[28px]">거래 상세 정보</h2>
+        <p className="absolute left-[68px] top-[278px] m-0 text-[20px] text-[#6b6b6b]">확인한 거래의 세부 정보입니다.</p>
+        <div className="absolute left-[68px] top-[350px] grid grid-cols-2 gap-x-[40px] gap-y-[26px]">
+          <Info label="거래 금액" value={`${item.amount.toLocaleString()}원`} />
+          <Info label="거래 유형" value={typeLabel(item.type)} />
+          <Info label="수취 계좌" value={item.payeeAccount ?? "-"} />
+          <Info label="거래 지역" value={item.region ?? "-"} />
+          <Info label="거래 시간" value={new Date(item.timestamp).toLocaleString("ko-KR")} />
+          <Info label="소비 카테고리" value={item.merchantCategory ?? "-"} />
+        </div>
+        <section className="absolute left-[68px] top-[754px] h-[94px] w-[1000px] rounded-[10px] border border-[#d9d9d9] bg-[#f5f5f5] px-[24px] py-[14px]">
+          <strong className="text-[20px]">분석 결과</strong>
+          <p className="mt-[8px] text-[20px]">{item.reason}</p>
+        </section>
+      </>}
+  </GuardianShell>;
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return <div><span className="mb-[10px] block text-[20px] font-medium">{label}</span><div className="flex h-[64px] w-[480px] items-center rounded-[6px] border border-[#d9d9d9] bg-white px-[18px] text-[20px]">{value}</div></div>;
+}

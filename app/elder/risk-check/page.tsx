@@ -5,9 +5,11 @@ import { AppShell } from "@/components/app-shell";
 import { RiskResultModal } from "@/components/risk-result-modal";
 import { Field, PrimaryButton, Surface } from "@/components/ui";
 import { checkRisk } from "@/lib/client-api";
+import { useSession } from "@/lib/session-context";
 import type { RiskRecord, TransactionType } from "@/lib/client-types";
 
 export default function RiskCheckPage() {
+  const me = useSession();
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TransactionType>("transfer");
   const [payee, setPayee] = useState("");
@@ -33,7 +35,7 @@ export default function RiskCheckPage() {
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
-      setResult(await checkRisk({ amount: Number(amount), userId: "u_01", type, payeeAccount: payee || undefined, region: region || undefined, merchantCategory: category || undefined, productRiskGrade: "none" }));
+      setResult(await checkRisk({ amount: Number(amount), userId: me.username, type, payeeAccount: payee || undefined, region: region || undefined, merchantCategory: category || undefined, productRiskGrade: "none" }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "요청에 실패했습니다.");
     } finally { setBusy(false); }
