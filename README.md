@@ -113,6 +113,13 @@ Vercel 배포 연결 완료 (https://safemoney-gamma.vercel.app, 프로젝트 `w
 >
 > `guardian-links.json`도 다른 Blob 기반 JSON 리소스와 마찬가지로, 해당 환경(로컬/Preview/Production)의 Blob 스토어에 한 번도 쓰기가 일어나지 않으면 파일이 존재하지 않습니다. 새 환경에서는 `POST /api/guardian-link`를 한 번 호출해 초기화하기 전까지 `GET`/`DELETE /api/guardian-link`가 실패합니다.
 >
+> `POST /api/guardian-link`는 이제 `initiatedBy: "senior" | "guardian"` 필드가 필수입니다(보호자가 시니어를 추가하면 승인 대기, 시니어가 보호자를 추가하면 즉시 승인). 초기화용 호출 예시:
+> ```bash
+> curl -X POST http://localhost:3000/api/guardian-link \
+>   -H "Content-Type: application/json" \
+>   -d '{"seniorUserId":"u_01","guardianEmail":"guardian@example.com","initiatedBy":"senior"}'
+> ```
+>
 > `users.json`/`sessions.json`(로그인/회원가입용)은 `guardian-links.json`과 달리 별도 초기화가 필요 없습니다 — 그 환경에서 첫 `POST /api/auth/signup`이 성공하는 순간 자동으로 생성됩니다.
 >
 > **계정은 환경(Blob 스토어)마다 완전히 분리됩니다.** Preview에서 가입한 계정으로 Production에 로그인할 수 없고, 반대도 마찬가지입니다. 배포/데모 전에 그 환경에서 새로 회원가입을 해야 합니다.
