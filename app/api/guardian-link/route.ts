@@ -8,6 +8,8 @@ import {
   listSeniorsForGuardian,
   updateGuardianLinkAlert,
 } from "@/lib/guardianLink";
+import { findSession, SESSION_COOKIE_NAME } from "@/lib/session";
+import { findUserById } from "@/lib/users";
 
 // GET /api/guardian-link?seniorUserId=                  → 그 시니어의 승인된 보호자 목록
 // GET /api/guardian-link?seniorUserId=&status=pending    → 그 시니어에게 온 대기 중 요청 목록
@@ -118,6 +120,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.approve === true) {
+    // approve는 body의 seniorUserId를 그대로 신뢰하면 아무나 자기 요청을 자기가 승인할 수 있으므로, 실제 로그인한 시니어 본인인지 세션으로 확인한다.
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const session = token ? await findSession(token) : null;
+    const user = session ? await findUserById(session.userId) : null;
+    if (!user || user.role !== "senior" || user.username !== body.seniorUserId) {
+      return NextResponse.json({ error: "본인 계정으로만 승인할 수 있습니다." }, { status: 403 });
+    }
+
     const approved = await approveGuardianLink(body.seniorUserId, body.guardianEmail);
     if (!approved) {
       return NextResponse.json({ error: "대기 중인 해당 조합의 요청이 없습니다." }, { status: 404 });
