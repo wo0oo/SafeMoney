@@ -50,17 +50,18 @@ export default function GuardianSettings() {
     }
   }
 
-  // 대기 요청이 있을 때만 그 아래 모든 고정 섹션(등록된 보호자/알림 설정/보호자 추가 버튼)을
-  // 이 값만큼 균일하게 아래로 민다. 넉넉하게 잡아서(항목당 74px + 여유 90px) 겹칠 일이 없게 한다 —
-  // 정확한 픽셀 맞춤보다 "절대 겹치지 않는 것"이 우선이다.
-  const shift = pending.length > 0 ? Math.min(90 + pending.length * 74, 200) : 0;
+  // 대기 요청 카드는 내부 스크롤(max-h-[120px])로 높이가 고정되므로, 아래 고정 섹션들을
+  // 미는 shift도 건수와 무관하게 고정값 하나만 쓴다 — 건수에 비례한 값을 쓰면 그 값과
+  // 카드 자체의 실제 렌더 높이가 어긋나서(패딩/제목/스크롤박스 합이 shift가 만드는 여백보다
+  // 커지는 경우) 카드가 바로 아래 섹션과 겹치는 회귀가 생긴다(실제로 한 번 겪었다).
+  const shift = pending.length > 0 ? 190 : 0;
 
   return <AppShell title="보호자 설정" active="guardian">
     <p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">고위험 거래가 감지되면 등록된 보호자에게 알림을 보냅니다</p>
     {pending.length > 0 && (
       <section className="absolute left-[68px] top-[70px] w-[1010px] rounded-[8px] border border-[#d9d9d9] bg-[#fffaf0] px-[31px] py-[20px]">
         <h2 className="m-0 text-[20px] font-semibold">대기 중인 연결 요청</h2>
-        <div className="mt-[14px] max-h-[200px] space-y-[10px] overflow-y-auto pr-[4px]">
+        <div className="mt-[14px] max-h-[120px] space-y-[10px] overflow-y-auto pr-[4px]">
           {pending.map((request) => (
             <div key={request.id} className="flex h-[64px] items-center rounded-[6px] border border-[#d9d9d9] bg-white px-[20px]">
               <span className="text-[18px]">{request.guardianEmail}</span>
