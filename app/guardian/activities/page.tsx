@@ -1,0 +1,1 @@
+import { GuardianShell } from "@/components/guardian-shell";import { GuardianRecords } from "@/components/guardian-records";export default function Page(){return <GuardianShell title="위험 활동" active="activities"><p className="absolute left-[68px] top-[34px] m-0 text-[20px] text-[#6b6b6b]">연결된 가족의 위험 거래 내역입니다.</p><GuardianRecords mode="activities"/></GuardianShell>}

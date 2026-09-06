@@ -1,0 +1,54 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { logout } from "@/lib/client-api";
+import { useSession } from "@/lib/session-context";
+
+const items = [
+  ["🏠", "홈", "/guardian", "home"],
+  ["⚠️", "위험 활동", "/guardian/activities", "activities"],
+  ["🔔", "알림", "/guardian/notifications", "notifications"],
+  ["👤", "연결된 가족", "/guardian/family", "family"],
+] as const;
+
+export function GuardianShell({ title, active, children, bell = false, unreadCount = 0 }: {
+  title: string; active: string; children: ReactNode; bell?: boolean; unreadCount?: number;
+}) {
+  const me = useSession();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await logout();
+    router.push("/login/guardian");
+  }
+
+  return (
+    <div className="relative h-[1024px] w-[1440px] overflow-hidden bg-[#fafafa]">
+      <aside className="absolute inset-y-0 left-0 w-[250px] border border-[#d9d9d9] bg-white">
+        <div className="absolute left-[32px] top-[28px] text-[30px] font-semibold">safemoney</div>
+        <div className="absolute left-[32px] top-[70px] text-[20px] text-[#6b6b6b]">보호자 계정</div>
+        <div className="absolute left-[24px] top-[104px] h-px w-[202px] bg-[#d9d9d9]" />
+        <nav className="absolute left-[18px] top-[126px] w-[214px]">
+          {items.map(([icon, label, href, key]) => (
+            <Link key={key} href={href} className={`mb-[14px] flex h-[54px] items-center rounded-[8px] px-[14px] text-[20px] no-underline ${active === key ? "bg-[#f5f5f5] font-semibold" : ""}`}>
+              <span className="mr-[16px] text-[24px]">{icon}</span>{label}
+            </Link>
+          ))}
+        </nav>
+        <div className="absolute bottom-[70px] left-[32px] text-[20px]">보호자 {me.name}님</div>
+        <button type="button" onClick={handleLogout} className="absolute bottom-[41px] left-[32px] border-0 bg-transparent p-0 text-[14px] text-[#6b6b6b] underline">로그아웃</button>
+      </aside>
+      <header className="absolute left-[250px] top-0 flex h-[88px] w-[1190px] items-center border border-[#d9d9d9] bg-white px-[47px]">
+        <h1 className="m-0 text-[28px] font-semibold">{title}</h1>
+        {bell && (
+          <Link href="/guardian/notifications" aria-label={`미확인 알림 ${unreadCount}개`} className="relative ml-auto text-[24px] no-underline">
+            🔔{unreadCount > 0 && <span className="absolute -right-[5px] -top-[2px] h-[10px] w-[10px] rounded-full bg-[#d11a1a]" />}
+          </Link>
+        )}
+      </header>
+      <main className="absolute left-[250px] top-[88px] h-[936px] w-[1190px]">{children}</main>
+    </div>
+  );
+}

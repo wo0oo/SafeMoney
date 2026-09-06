@@ -44,5 +44,8 @@ next-env.d.ts
 /data/*.json
 !/data/*.example.json
 
+# 외부 원본 데이터셋(PaySim 등) - 용량 크고 재다운로드 가능해서 커밋 안 함
+/data/raw/
+
 .vercel
 .env*
